@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microsecond Market</title>
+<meta name="description" content="A playable microsecond simulator of high-frequency trading on NYSE, Nasdaq and HKEX, and a research study of market making on live order books.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FFA028'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' text-anchor='middle' fill='%23000'%3E%CE%BCs%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#050505;--panel:#0d0d0d;--line:#262626;--ink:#e8e8e8;--muted:#a3a3a3;--dim:#6b6b6b;--accent:#ffa028}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "IBM Plex Sans",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+main{width:min(760px,100%);margin:0 auto;padding:56px 16px 32px;flex:1}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{display:grid;place-items:center;width:44px;height:44px;background:var(--accent);color:#000;font:700 20px "IBM Plex Mono",monospace}
+h1{margin:0;font:700 30px/1.1 "IBM Plex Sans Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.tag{margin:4px 0 0;font:600 12px "IBM Plex Sans Condensed",sans-serif;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
+p.lead{margin:28px 0 24px;font-size:18px;color:var(--ink);max-width:62ch}
+.links{display:grid;gap:10px}
+a.card{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);color:inherit;text-decoration:none}
+a.card:hover,a.card:focus-visible{border-color:var(--accent);outline:none}
+a.card b{font:700 15px "IBM Plex Sans Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+a.card span{grid-column:1;color:var(--muted);font-size:14px}
+a.card i{grid-row:1/3;grid-column:2;font:500 18px "IBM Plex Mono",monospace;color:var(--accent);font-style:normal}
+.facts{margin:28px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.facts li{background:var(--panel);padding:10px 12px}
+.facts b{display:block;font:700 20px "IBM Plex Mono",monospace;color:var(--ink)}
+.facts small{color:var(--dim);font-size:13px}
+footer{width:min(760px,100%);margin:0 auto;padding:20px 16px 32px;color:var(--dim);font-size:13px;border-top:1px solid var(--line)}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><span class="logo" aria-hidden="true">μs</span><div><h1>Microsecond Market</h1><p class="tag">High-frequency trading research and simulator</p></div></div>
+  <p class="lead">A playable, microsecond-level simulator of how high-frequency trading works on NYSE, Nasdaq and the Hong Kong Stock Exchange, and a research study asking whether market making pays on live order books.</p>
+  <nav class="links" aria-label="Project pages">
+    <a class="card" href="web/microsecond-market/"><b>Open the simulator</b><span>3D order book, message flow between data centers, a 150-stock market, scenarios from news shocks to the 2010 flash crash.</span><i aria-hidden="true">→</i></a>
+    <a class="card" href="docs/report.html"><b>Read the research report</b><span>“Does the spread pay?” Pre-registered test of a market maker on NASDAQ-100 and gold order books.</span><i aria-hidden="true">→</i></a>
+    <a class="card" href="web/pyramid-lab.html"><b>Pyramid quote lab</b><span>Interactive Avellaneda–Stoikov quoting with a 3D profit surface.</span><i aria-hidden="true">→</i></a>
+    <a class="card" href="https://github.com/Kas3123/microsecond-market"><b>Source code</b><span>The repository on GitHub, with the research pipeline and tests.</span><i aria-hidden="true">→</i></a>
+  </nav>
+  <ul class="facts">
+    <li><b>0 / 96</b><small>strategy settings that made market-making profit after fees on the holdout data</small></li>
+    <li><b>4.1 ms</b><small>Chicago to New Jersey by microwave, versus 6.6 ms over fiber</small></li>
+    <li><b>150</b><small>made-up stocks reacting to the same index futures</small></li>
+  </ul>
+</main>
+<footer>Educational project, not investment advice. All companies and firms in the simulator are fictional. © 2026, all rights reserved. <a href="https://github.com/Kas3123/microsecond-market">GitHub</a></footer>
+</body>
+</html>
