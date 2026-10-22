@@ -1,0 +1,62 @@
+{
+  "xyz:GOLD": {
+    "coin": "xyz:GOLD",
+    "window": "holdout",
+    "hours": 4.99,
+    "quote_updates": 44206,
+    "quote_updates_per_s": 2.46,
+    "recording_gaps_over_30s": 0,
+    "tick": 0.1,
+    "mid_first_last": [
+      4186.85,
+      4184.45
+    ],
+    "spread_one_tick_time_share": 0.978,
+    "spread_mean_ticks_time_weighted": 1.055,
+    "spread_mean_bps_time_weighted": 0.252,
+    "best_level_size_median": {
+      "bid": 7.9911,
+      "ask": 6.49485
+    },
+    "top5_depth_median": {
+      "bid": 51.2569,
+      "ask": 55.628
+    },
+    "trades": 4400,
+    "trades_per_min": 14.7,
+    "trade_size_median": 0.09425,
+    "notional_per_hour_usd": 1779351,
+    "buyer_initiated_share": 0.64,
+    "realized_vol_hourly_bps": 13.91
+  },
+  "xyz:XYZ100": {
+    "coin": "xyz:XYZ100",
+    "window": "holdout",
+    "hours": 4.99,
+    "quote_updates": 79515,
+    "quote_updates_per_s": 4.43,
+    "recording_gaps_over_30s": 0,
+    "tick": 1.0,
+    "mid_first_last": [
+      30985.5,
+      30862.0
+    ],
+    "spread_one_tick_time_share": 0.918,
+    "spread_mean_ticks_time_weighted": 1.108,
+    "spread_mean_bps_time_weighted": 0.358,
+    "best_level_size_median": {
+      "bid": 1.2332,
+      "ask": 1.1593
+    },
+    "top5_depth_median": {
+      "bid": 34.5655,
+      "ask": 34.120599999999996
+    },
+    "trades": 11090,
+    "trades_per_min": 37.06,
+    "trade_size_median": 0.0069,
+    "notional_per_hour_usd": 11083576,
+    "buyer_initiated_share": 0.516,
+    "realized_vol_hourly_bps": 14.27
+  }
+}

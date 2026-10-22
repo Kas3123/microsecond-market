@@ -1,0 +1,18 @@
+
+=== xyz:GOLD: 5433 snapshots, 7130 trades, 8.11 h ===
+1. Where trades print vs the previous snapshot's best bid/ask:
+   side B: at ask 3204 (77%), above ask 595 (14%), below bid 274 (7%), at bid 69 (2%), inside spread 45 (1%)
+   side A: at bid 2141 (73%), below bid 608 (21%), above ask 128 (4%), at ask 42 (1%), inside spread 24 (1%)
+2. Trades at prices not at the snapshot's best bid/ask: 1674/7130 (23.5%)
+3. Snapshot gap s: median 5.39, p90 5.49, max 10.8; gaps > 30s: 0; identical consecutive snapshots: 0/5432
+   Crossed or locked books (bid >= ask): 0
+   Trades sharing a timestamp with another trade: 34% (one aggressive order sweeping several resting orders)
+
+=== xyz:XYZ100: 5432 snapshots, 15629 trades, 8.11 h ===
+1. Where trades print vs the previous snapshot's best bid/ask:
+   side B: at ask 3623 (45%), above ask 3305 (41%), at bid 509 (6%), below bid 420 (5%), inside spread 209 (3%)
+   side A: below bid 3472 (46%), at bid 3155 (42%), at ask 386 (5%), above ask 383 (5%), inside spread 167 (2%)
+2. Trades at prices not at the snapshot's best bid/ask: 7956/15629 (50.9%)
+3. Snapshot gap s: median 5.39, p90 5.49, max 15.1; gaps > 30s: 0; identical consecutive snapshots: 0/5431
+   Crossed or locked books (bid >= ask): 0
+   Trades sharing a timestamp with another trade: 46% (one aggressive order sweeping several resting orders)

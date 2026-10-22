@@ -1,0 +1,40 @@
+
+=== xyz:GOLD [dev] ===
+  hours: 2.94
+  quote_updates: 15932
+  quote_updates_per_s: 1.51
+  recording_gaps_over_30s: 0
+  tick: 0.1
+  mid_first_last: [4196.55, 4186.85]
+  spread_one_tick_time_share: 0.992
+  spread_mean_ticks_time_weighted: 1.019
+  spread_mean_bps_time_weighted: 0.243
+  best_level_size_median: {'bid': 9.98675, 'ask': 12.120149999999999}
+  top5_depth_median: {'bid': 46.5479, 'ask': 75.6995}
+  trades: 2760
+  trades_per_min: 15.67
+  trade_size_median: 0.07619999999999999
+  notional_per_hour_usd: 1236211
+  buyer_initiated_share: 0.503
+  realized_vol_hourly_bps: 8.26
+
+=== xyz:XYZ100 [dev] ===
+  hours: 2.94
+  quote_updates: 32473
+  quote_updates_per_s: 3.07
+  recording_gaps_over_30s: 0
+  tick: 1.0
+  mid_first_last: [30964.5, 30985.5]
+  spread_one_tick_time_share: 0.957
+  spread_mean_ticks_time_weighted: 1.05
+  spread_mean_bps_time_weighted: 0.339
+  best_level_size_median: {'bid': 1.0991, 'ask': 1.1784}
+  top5_depth_median: {'bid': 37.2299, 'ask': 35.369749999999996}
+  trades: 4572
+  trades_per_min: 25.95
+  trade_size_median: 0.0081
+  notional_per_hour_usd: 7309228
+  buyer_initiated_share: 0.517
+  realized_vol_hourly_bps: 9.09
+
+Wrote data\market_stats_dev.json

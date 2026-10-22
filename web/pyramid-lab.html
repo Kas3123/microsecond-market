@@ -1,0 +1,512 @@
+<title>Pyramid Quote Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F4F6; --surface:#FFFFFF; --line:#DDE2E7; --ink:#16202A; --muted:#5B6875;
+  --accent:#2F5BEA; --bid:#1E8E5A; --ask:#C8413B; --inv:#7A4FC4; --skew:#D9822B; --grid:#E9EDF1;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0F1419; --surface:#171E26; --line:#26313C; --ink:#E4E9EE; --muted:#8A97A4;
+    --accent:#7B98FF; --bid:#3FBF83; --ask:#F06A63; --inv:#A98BF0; --skew:#F0A257; --grid:#1F2832;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F1419; --surface:#171E26; --line:#26313C; --ink:#E4E9EE; --muted:#8A97A4;
+  --accent:#7B98FF; --bid:#3FBF83; --ask:#F06A63; --inv:#A98BF0; --skew:#F0A257; --grid:#1F2832;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 "IBM Plex Sans",system-ui,sans-serif;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header h1{font-size:22px;font-weight:600;margin:0;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.grid{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.controls{display:flex;flex-direction:column;gap:14px}
+.ctl label{display:flex;justify-content:space-between;font-size:13px;font-weight:500}
+.ctl label output{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--accent)}
+.tog{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}.tog input{margin-top:3px;accent-color:var(--accent)}.tog b{font-weight:500}.tog small{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+.ctl small{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:4px 0 -4px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-weight:500;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:6px;padding:7px 12px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.stat span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.pos{color:var(--bid)} .neg{color:var(--ask)}
+.chart h2{font-size:14px;font-weight:600;margin:0 0 2px}
+.chart p{margin:0 0 8px;color:var(--muted);font-size:12.5px}
+canvas{width:100%;display:block}
+.scrub{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--muted);margin-top:6px}
+.scrub input{flex:1}
+.note{font-size:12.5px;color:var(--muted);max-width:80ch}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pyramid Quote Lab</h1>
+    <p>A market maker posts stacked buy and sell orders around the price and earns the gap. Move the sliders to see how quote width, ladder depth and risk aversion change fills, inventory and profit. Volatility is calibrated to Liquid's live NASDAQ‑100 reading (ATR 83.34 pts/hour at 30,911). Prices are simulated.</p>
+  </header>
+
+  <div class="grid">
+    <aside class="panel controls" aria-label="Strategy settings">
+      <div class="sec">Strategy</div>
+      <div class="ctl"><label for="mult">Quote width <output id="multO"></output></label>
+        <input id="mult" type="range" min="1" max="10" step="0.25" value="4">
+        <small>Multiple of the base Avellaneda‑Stoikov spread. Too tight and informed traders pick you off; too wide and nobody trades.</small></div>
+      <div class="ctl"><label for="levels">Pyramid levels per side <output id="levelsO"></output></label>
+        <input id="levels" type="range" min="1" max="8" step="1" value="4"></div>
+      <div class="ctl"><label for="taper">Size taper per level <output id="taperO"></output></label>
+        <input id="taper" type="range" min="0.2" max="1" step="0.05" value="0.6">
+        <small>Outer levels carry this fraction of the size of the level inside them.</small></div>
+      <div class="ctl"><label for="gamma">Inventory risk aversion γ <output id="gammaO"></output></label>
+        <input id="gamma" type="range" min="0.02" max="1" step="0.02" value="0.1">
+        <small>Higher γ skews quotes harder when inventory builds up.</small></div>
+      <div class="ctl"><label for="maxinv">Inventory limit <output id="maxinvO"></output></label>
+        <input id="maxinv" type="range" min="2" max="50" step="1" value="50"></div>
+
+      <div class="sec">Upgrades</div>
+      <label class="tog" for="volAdapt"><input id="volAdapt" type="checkbox"> <span><b>Volatility‑adaptive width</b><small>Widen quotes when the last 30s are wilder than the last 10 min; stop quoting above 2×.</small></span></label>
+      <label class="tog" for="imbSkew"><input id="imbSkew" type="checkbox"> <span><b>Lean on order‑book imbalance</b><small>Learns from past ticks how much the bid/ask imbalance predicts the next move, then shifts quotes by that amount.</small></span></label>
+
+      <div class="sec">Market</div>
+      <div class="ctl"><label for="atr">Hourly ATR (pts) <output id="atrO"></output></label>
+        <input id="atr" type="range" min="20" max="250" step="1" value="83"></div>
+      <div class="ctl"><label for="noise">Uninformed order flow /s <output id="noiseO"></output></label>
+        <input id="noise" type="range" min="0" max="2" step="0.05" value="0.3">
+        <small>Random traders who aren't predicting the price. They are where the spread profit comes from.</small></div>
+      <div class="ctl"><label for="fee">Fee per fill (pts) <output id="feeO"></output></label>
+        <input id="fee" type="range" min="0" max="1" step="0.05" value="0"></div>
+      <div class="ctl"><label for="storms">Volatility storms per hour <output id="stormsO"></output></label>
+        <input id="storms" type="range" min="0" max="4" step="0.5" value="0">
+        <small>Each storm triples volatility for about 5 minutes.</small></div>
+      <div class="ctl"><label for="rho">Order‑book signal strength ρ <output id="rhoO"></output></label>
+        <input id="rho" type="range" min="0" max="0.4" step="0.05" value="0">
+        <small>How strongly imbalance predicts the next tick. An assumption until we measure it on Liquid's real book.</small></div>
+      <div class="ctl"><label for="seed">Random seed <output id="seedO"></output></label>
+        <input id="seed" type="range" min="1" max="50" step="1" value="42"></div>
+
+      <div class="btns">
+        <button id="sweepBtn" type="button">Run width sweep</button>
+        <button id="resetBtn" type="button" class="ghost">Reset</button>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="stats">
+        <div class="stat"><span>Final P&amp;L</span><b id="sPnl">–</b></div>
+        <div class="stat"><span>Fills</span><b id="sFills">–</b></div>
+        <div class="stat"><span>Max |inventory|</span><b id="sMaxInv">–</b></div>
+        <div class="stat"><span>Avg half‑spread (pts)</span><b id="sSpread">–</b></div>
+      </div>
+      <p class="note" style="margin:-6px 0 0">Time paused (not quoting): <b id="sPaused" style="font-family:'IBM Plex Mono',monospace">–</b>. Grey bands on the charts below mark volatility storms.</p>
+
+      <div class="panel chart">
+        <h2>The quote pyramid</h2>
+        <p>A 5‑minute window. Each line is one resting order level; triangles are fills.</p>
+        <div class="legend"><span><i style="background:var(--ink)"></i>Mid price</span><span><i style="background:var(--ask)"></i>Ask ladder / we sold</span><span><i style="background:var(--bid)"></i>Bid ladder / we bought</span></div>
+        <canvas id="cLadder" height="260"></canvas>
+        <div class="scrub"><label for="win">Window</label><input id="win" type="range" min="0" max="6900" step="30" value="2100"><output id="winO"></output></div>
+      </div>
+
+      <div class="panel chart">
+        <h2>Inventory and quote skew</h2>
+        <p>When the bot is short, it moves quotes up to buy back. When it is long, it moves them down to sell.</p>
+        <div class="legend"><span><i style="background:var(--inv)"></i>Inventory (units)</span><span><i style="background:var(--skew)"></i>Skew: reservation − mid (pts)</span></div>
+        <canvas id="cInv" height="180"></canvas>
+      </div>
+
+      <div class="panel chart">
+        <h2>Running profit and loss</h2>
+        <p>Cash plus inventory valued at the mid price, over two simulated hours.</p>
+        <canvas id="cPnl" height="170"></canvas>
+      </div>
+
+      <div class="panel chart" id="sweepPanel">
+        <h2>Profit vs quote width</h2>
+        <p id="sweepCap">Press “Run width sweep” to average 5 seeds at each width with the current settings.</p>
+        <canvas id="cSweep" height="200"></canvas>
+      </div>
+
+      <div class="panel chart">
+        <h2>Profit surface</h2>
+        <p>Average final P&amp;L over a grid of two settings, 3 random runs per point. A broad plateau suggests a real edge; a lone spike is probably luck. Drag to rotate.</p>
+        <div class="btns" style="align-items:center">
+          <label for="surfY" style="font-size:13px;font-weight:500">Second axis</label>
+          <select id="surfY" style="font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)">
+            <option value="gamma">Risk aversion γ</option>
+            <option value="fee">Fee per fill</option>
+            <option value="noise">Uninformed order flow</option>
+          </select>
+          <button id="surfBtn" type="button">Build surface</button>
+          <span id="surfStatus" style="font-size:12.5px;color:var(--muted)"></span>
+        </div>
+        <canvas id="surf" height="440" style="margin-top:8px;cursor:grab;touch-action:none" aria-label="3D profit surface, drag to rotate"></canvas>
+      </div>
+
+      <div class="panel chart" id="tests">
+        <h2>Out-of-sample test data</h2>
+        <p>Your chosen settings (4× width, 7 levels, taper 0.6, γ 0.54) run on 50 price paths this page never uses (seeds 1000–1049). Every run is listed below. Click a column header to sort.</p>
+        <div class="btns" style="align-items:center">
+          <label for="oosScen" style="font-size:13px;font-weight:500">Scenario</label>
+          <select id="oosScen" style="font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);max-width:100%"></select>
+        </div>
+        <div class="stats" id="oosStats" style="margin-top:10px"></div>
+        <canvas id="cHist" height="170" style="margin-top:10px"></canvas>
+        <div style="overflow:auto;max-height:360px;margin-top:10px;border:1px solid var(--line);border-radius:6px">
+          <table id="oosTable" style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums"></table>
+        </div>
+      </div>
+
+      <p class="note">Model: stationary Avellaneda‑Stoikov. Reservation price r = mid − q·γ·σ²/κ; half‑spread δ = γσ²/(2κ) + (1/γ)·ln(1+γ/κ), with κ = 1.5 and σ the rolling 5‑minute volatility. Fills come from price moving through a quote (informed flow) or from random arrivals at rate A·e^(−κ·distance). Latency and queue position are not modelled.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const N = 7200, S0 = 30911, KAPPA = 1.5, WIN = 300;
+const $ = id => document.getElementById(id);
+const ids = ["mult","levels","taper","gamma","maxinv","atr","noise","fee","seed","storms","rho"];
+const toggles = ["volAdapt","imbSkew"];
+const defaults = Object.fromEntries(ids.map(i => [i, $(i).value]));
+const fmt = {mult:v=>v+"×",levels:v=>v,taper:v=>(+v).toFixed(2),gamma:v=>(+v).toFixed(2),maxinv:v=>v,atr:v=>v,noise:v=>(+v).toFixed(2),fee:v=>(+v).toFixed(2),seed:v=>v,storms:v=>(+v).toFixed(1),rho:v=>(+v).toFixed(2)};
+
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0;while(!u)u=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r())}
+
+// Market: price path with optional volatility storms and an order-book imbalance
+// reading whose correlation with the NEXT price move is rho (an assumption, 0 = useless).
+function market(atr, seed, stormRate, rho){
+  const r=rng(seed*7919+1), r2=rng(seed*31337+3), r3=rng(seed*65537+5);
+  const s=(atr/S0)/60, p=new Float64Array(N), imb=new Float64Array(N), storm=new Uint8Array(N), z=new Float64Array(N);
+  const pStart=stormRate/3600, pEnd=1/300; let on=false;
+  for(let i=0;i<N;i++){ on=on?(r2()>=pEnd):(r2()<pStart); storm[i]=on?1:0 }
+  for(let i=0;i<N;i++) z[i]=gauss(r);
+  let lp=Math.log(S0);
+  for(let i=0;i<N;i++){const v=s*(storm[i]?3:1); lp+=-0.5*v*v+v*z[i]; p[i]=Math.exp(lp)}
+  const k=Math.sqrt(1-rho*rho);
+  for(let i=0;i<N;i++){const nx=i+1<N?z[i+1]:0; imb[i]=Math.tanh(rho*nx+k*gauss(r3))}
+  return {p,imb,storm};
+}
+
+function run(m, c, seed){
+  const p=m.p, imb=m.imb, r=rng(seed*104729+7);
+  const inv=new Float64Array(N), pnl=new Float64Array(N), res=new Float64Array(N), hs=new Float64Array(N);
+  const lr=new Float64Array(N); for(let i=1;i<N;i++) lr[i]=Math.log(p[i]/p[i-1]);
+  const sq=new Float64Array(N); for(let i=1;i<N;i++) sq[i]=sq[i-1]+lr[i]*lr[i];
+  const realized=(t,w)=>{const a=Math.max(0,t-w),k=t-a;return k>=5?Math.sqrt((sq[t]-sq[a])/k):null};
+  let q=0, cash=0, s1=0, s2=0, sxy=0, sxx=0, fills=[];
+  for(let t=0;t<N;t++){
+    if(t>0){s1+=lr[t];s2+=lr[t]*lr[t]} if(t>WIN){s1-=lr[t-WIN];s2-=lr[t-WIN]*lr[t-WIN]}
+    const n=Math.min(t,WIN), mid=p[t], nx=t+1<N?p[t+1]:mid;
+    const sd=n>=4?Math.sqrt(Math.max(s2/n-(s1/n)**2,0)):1e-5;
+    const sig=Math.max(sd*mid,1e-6);
+    let reservation=mid-q*c.gamma*sig*sig/KAPPA;
+    let half=c.mult*(c.gamma*sig*sig/(2*KAPPA)+(1/c.gamma)*Math.log(1+c.gamma/KAPPA));
+    let quoting=true;
+    if(c.volAdapt){const a=realized(t,30), b=realized(t,600); if(a!==null&&b!==null&&b>0){const ratio=a/b; half*=Math.max(1,ratio); quoting=ratio<=2}}
+    if(c.imbSkew){
+      if(t>=1){sxy+=imb[t-1]*lr[t]; sxx+=imb[t-1]*imb[t-1]}
+      if(t>=60&&sxx>0) reservation+=(sxy/sxx)*imb[t]*mid;
+    }
+    res[t]=reservation; hs[t]=quoting?half:NaN;
+    if(!quoting){inv[t]=q; pnl[t]=cash+q*mid; continue}
+    for(let L=0;L<c.levels;L++){
+      const d=half*(1+L), sz=Math.pow(c.taper,L), bid=reservation-d, ask=reservation+d;
+      if(q<c.maxinv){
+        const pf=1-Math.exp(-c.noise*Math.exp(-KAPPA*(mid-bid)));
+        if(nx<=bid || r()<pf){q+=sz;cash-=(bid+c.fee)*sz;fills.push([t,0,bid])}
+      }
+      if(q>-c.maxinv){
+        const pf=1-Math.exp(-c.noise*Math.exp(-KAPPA*(ask-mid)));
+        if(nx>=ask || r()<pf){q-=sz;cash+=(ask-c.fee)*sz;fills.push([t,1,ask])}
+      }
+    }
+    inv[t]=q; pnl[t]=cash+q*mid;
+  }
+  return {inv,pnl,res,hs,fills};
+}
+
+function cfg(){return{mult:+$("mult").value,levels:+$("levels").value,taper:+$("taper").value,gamma:+$("gamma").value,maxinv:+$("maxinv").value,atr:+$("atr").value,noise:+$("noise").value,fee:+$("fee").value,seed:+$("seed").value,
+  storms:+$("storms").value,rho:+$("rho").value,volAdapt:$("volAdapt").checked,imbSkew:$("imbSkew").checked}}
+const mkCache={};
+function mkt(c,s){const k=[c.atr,s,c.storms,c.rho].join(":");return mkCache[k]||(mkCache[k]=market(c.atr,s,c.storms,c.rho))}
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function setup(cv){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=+cv.getAttribute("height");
+  cv.width=w*dpr; cv.height=h*dpr; cv.style.height=h+"px";
+  const x=cv.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); x.font='11px "IBM Plex Mono", monospace';
+  return {x,w,h};
+}
+function axes(x,w,h,pad,lo,hi,ticks,fmtY){
+  x.strokeStyle=css("--grid"); x.fillStyle=css("--muted"); x.lineWidth=1; x.textAlign="right"; x.textBaseline="middle";
+  for(let i=0;i<=ticks;i++){const v=lo+(hi-lo)*i/ticks, y=pad.t+(h-pad.t-pad.b)*(1-i/ticks);
+    x.beginPath();x.moveTo(pad.l,y);x.lineTo(w-pad.r,y);x.stroke(); x.fillText(fmtY(v),pad.l-6,y)}
+}
+function line(x,arr,i0,i1,X,Y,color,width,alpha=1){
+  x.strokeStyle=color;x.lineWidth=width;x.globalAlpha=alpha;x.beginPath();
+  let pen=false;
+  for(let i=i0;i<i1;i++){const v=arr(i); if(!Number.isFinite(v)){pen=false;continue} const px=X(i),py=Y(v); pen?x.lineTo(px,py):x.moveTo(px,py); pen=true}
+  x.stroke();x.globalAlpha=1;
+}
+function tri(x,px,py,up,color){x.fillStyle=color;x.beginPath();
+  if(up){x.moveTo(px,py-5);x.lineTo(px-4.5,py+3);x.lineTo(px+4.5,py+3)}else{x.moveTo(px,py+5);x.lineTo(px-4.5,py-3);x.lineTo(px+4.5,py-3)}
+  x.closePath();x.fill()}
+function xLabels(x,w,h,pad,i0,i1,X){
+  x.fillStyle=css("--muted");x.textAlign="center";x.textBaseline="top";
+  const step=(i1-i0)>1000?1200:60;
+  for(let s=Math.ceil(i0/step)*step;s<=i1;s+=step){const lab=step>=1200?(s/60)+"m":s+"s";x.fillText(lab,X(s),h-pad.b+5)}
+}
+
+function stormBands(x,X,top,bot,i0,i1){
+  if(!M) return; x.fillStyle=css("--muted"); x.globalAlpha=0.12; let start=-1;
+  for(let i=i0;i<=i1;i++){const on=i<i1&&M.storm[i]; if(on&&start<0)start=i; if(!on&&start>=0){x.fillRect(X(start),top,Math.max(1,X(i)-X(start)),bot-top);start=-1}}
+  x.globalAlpha=1;
+}
+let P, R, C, M;
+function drawLadder(){
+  const {x,w,h}=setup($("cLadder")), pad={l:62,r:10,t:10,b:22};
+  const w0=+$("win").value, w1=Math.min(w0+WIN,N); $("winO").textContent=`${w0}–${w1}s`;
+  let lo=Infinity,hi=-Infinity;
+  for(let i=w0;i<w1;i++){lo=Math.min(lo,P[i]);hi=Math.max(hi,P[i]); const d=R.hs[i]*C.levels; if(Number.isFinite(d)){lo=Math.min(lo,R.res[i]-d);hi=Math.max(hi,R.res[i]+d)}}
+  const m=(hi-lo)*0.05; lo-=m; hi+=m;
+  const X=i=>pad.l+(w-pad.l-pad.r)*(i-w0)/(w1-w0-1), Y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/(hi-lo));
+  axes(x,w,h,pad,lo,hi,4,v=>v.toFixed(0));
+  stormBands(x,X,pad.t,h-pad.b,w0,w1);
+  for(let L=C.levels-1;L>=0;L--){
+    const a=Math.max(0.25,0.95-0.15*L);
+    line(x,i=>R.res[i]+R.hs[i]*(1+L),w0,w1,X,Y,css("--ask"),1,a);
+    line(x,i=>R.res[i]-R.hs[i]*(1+L),w0,w1,X,Y,css("--bid"),1,a);
+  }
+  line(x,i=>P[i],w0,w1,X,Y,css("--ink"),1.6);
+  for(const f of R.fills) if(f[0]>=w0&&f[0]<w1) tri(x,X(f[0]),Y(f[2]),f[1]===0,f[1]===0?css("--bid"):css("--ask"));
+  xLabels(x,w,h,pad,w0,w1,X);
+}
+function drawInv(){
+  const {x,w,h}=setup($("cInv")), pad={l:48,r:52,t:10,b:22};
+  let m=1; for(let i=0;i<N;i++) m=Math.max(m,Math.abs(R.inv[i]));
+  let sm=1e-9; for(let i=0;i<N;i++) sm=Math.max(sm,Math.abs(R.res[i]-P[i]));
+  const X=i=>pad.l+(w-pad.l-pad.r)*i/(N-1), Y=v=>pad.t+(h-pad.t-pad.b)*(1-(v+m)/(2*m)), Y2=v=>pad.t+(h-pad.t-pad.b)*(1-(v+sm)/(2*sm));
+  axes(x,w,h,pad,-m,m,4,v=>v.toFixed(1));
+  stormBands(x,X,pad.t,h-pad.b,0,N);
+  x.fillStyle=css("--skew");x.textAlign="left";
+  for(let i=0;i<=4;i++){const v=-sm+2*sm*i/4;x.fillText(v.toFixed(2),w-pad.r+6,pad.t+(h-pad.t-pad.b)*(1-i/4))}
+  line(x,i=>R.res[i]-P[i],0,N,X,Y2,css("--skew"),1,0.85);
+  line(x,i=>R.inv[i],0,N,X,Y,css("--inv"),1.4);
+  xLabels(x,w,h,pad,0,N-1,X);
+}
+function drawPnl(){
+  const {x,w,h}=setup($("cPnl")), pad={l:62,r:10,t:10,b:22};
+  let lo=0,hi=0; for(let i=0;i<N;i++){lo=Math.min(lo,R.pnl[i]);hi=Math.max(hi,R.pnl[i])}
+  const m=Math.max(hi-lo,1)*0.08; lo-=m; hi+=m;
+  const X=i=>pad.l+(w-pad.l-pad.r)*i/(N-1), Y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/(hi-lo));
+  axes(x,w,h,pad,lo,hi,4,v=>v.toFixed(0));
+  stormBands(x,X,pad.t,h-pad.b,0,N);
+  x.strokeStyle=css("--muted");x.setLineDash([3,3]);x.beginPath();x.moveTo(pad.l,Y(0));x.lineTo(w-pad.r,Y(0));x.stroke();x.setLineDash([]);
+  const end=R.pnl[N-1], col=end>=0?css("--bid"):css("--ask");
+  x.fillStyle=col;x.globalAlpha=0.12;x.beginPath();x.moveTo(X(0),Y(0));
+  for(let i=0;i<N;i++)x.lineTo(X(i),Y(R.pnl[i]));x.lineTo(X(N-1),Y(0));x.closePath();x.fill();x.globalAlpha=1;
+  line(x,i=>R.pnl[i],0,N,X,Y,col,1.5);
+  x.beginPath();x.arc(X(N-1),Y(end),3.5,0,7);x.fill();
+  xLabels(x,w,h,pad,0,N-1,X);
+}
+
+let sweep=null;
+function drawSweep(){
+  const {x,w,h}=setup($("cSweep")), pad={l:62,r:14,t:12,b:26};
+  if(!sweep){x.fillStyle=css("--muted");x.textAlign="center";x.fillText("No sweep yet",w/2,h/2);return}
+  let lo=0,hi=0; for(const s of sweep){lo=Math.min(lo,s.mean-s.sd);hi=Math.max(hi,s.mean+s.sd)}
+  const m=(hi-lo)*0.08; lo-=m; hi+=m;
+  const xs=sweep.map(s=>s.mult), X=v=>pad.l+(w-pad.l-pad.r)*(v-xs[0])/(xs[xs.length-1]-xs[0]), Y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-lo)/(hi-lo));
+  axes(x,w,h,pad,lo,hi,4,v=>v.toFixed(0));
+  x.strokeStyle=css("--muted");x.setLineDash([3,3]);x.beginPath();x.moveTo(pad.l,Y(0));x.lineTo(w-pad.r,Y(0));x.stroke();x.setLineDash([]);
+  x.fillStyle=css("--accent");x.globalAlpha=0.14;x.beginPath();
+  sweep.forEach((s,i)=>i?x.lineTo(X(s.mult),Y(s.mean+s.sd)):x.moveTo(X(s.mult),Y(s.mean+s.sd)));
+  [...sweep].reverse().forEach(s=>x.lineTo(X(s.mult),Y(s.mean-s.sd)));x.closePath();x.fill();x.globalAlpha=1;
+  line(x,i=>sweep[i].mean,0,sweep.length,i=>X(sweep[i].mult),Y,css("--accent"),1.8);
+  const best=sweep.reduce((a,b)=>b.mean>a.mean?b:a);
+  sweep.forEach(s=>{x.fillStyle=s===best?css("--bid"):css("--accent");x.beginPath();x.arc(X(s.mult),Y(s.mean),s===best?5:3,0,7);x.fill()});
+  x.fillStyle=css("--muted");x.textAlign="center";x.textBaseline="top";
+  sweep.forEach(s=>x.fillText(s.mult+"×",X(s.mult),h-pad.b+6));
+  const cur=+$("mult").value; if(cur>=xs[0]&&cur<=xs[xs.length-1]){x.strokeStyle=css("--ink");x.globalAlpha=0.4;x.beginPath();x.moveTo(X(cur),pad.t);x.lineTo(X(cur),h-pad.b);x.stroke();x.globalAlpha=1}
+}
+
+function stats(){
+  const end=R.pnl[N-1]; let mi=0; for(let i=0;i<N;i++) mi=Math.max(mi,Math.abs(R.inv[i]));
+  let hs=0, nq=0; for(let i=0;i<N;i++) if(Number.isFinite(R.hs[i])){hs+=R.hs[i];nq++}
+  const e=$("sPnl"); e.textContent=(end>=0?"+":"")+end.toFixed(1); e.className=end>=0?"pos":"neg";
+  $("sFills").textContent=R.fills.length.toLocaleString();
+  $("sMaxInv").textContent=mi.toFixed(2);
+  $("sSpread").textContent=nq?(hs/nq).toFixed(2):"–";
+  $("sPaused").textContent=((N-nq)/N*100).toFixed(1)+"%";
+}
+
+function render(){ drawLadder(); drawInv(); drawPnl(); drawSweep(); drawSurface(); drawOos(); }
+function update(){
+  for(const i of ids) $(i+"O").textContent=fmt[i]($(i).value);
+  C=cfg(); M=mkt(C,C.seed); P=M.p; R=run(M,C,C.seed); stats(); render();
+}
+
+$("sweepBtn").addEventListener("click",()=>{
+  const base=cfg(), out=[];
+  for(const mult of [1,1.5,2,3,4,5,6,8,10]){
+    const v=[]; for(let s=1;s<=5;s++){v.push(run(mkt(base,s),{...base,mult},s).pnl[N-1])}
+    const mean=v.reduce((a,b)=>a+b)/v.length, sd=Math.sqrt(v.reduce((a,b)=>a+(b-mean)**2,0)/v.length);
+    out.push({mult,mean,sd});
+  }
+  sweep=out; const best=out.reduce((a,b)=>b.mean>a.mean?b:a);
+  $("sweepCap").textContent=`Average over 5 seeds; shaded band is ±1 standard deviation. Best width with these settings: ${best.mult}× (mean ${best.mean>=0?"+":""}${best.mean.toFixed(0)} pts).`;
+  drawSweep();
+});
+$("resetBtn").addEventListener("click",()=>{for(const i of ids)$(i).value=defaults[i]; for(const t of toggles)$(t).checked=false; sweep=null; $("sweepCap").textContent="Press “Run width sweep” to average 5 seeds at each width with the current settings."; update()});
+for(const i of ids) $(i).addEventListener("input",update);
+for(const t of toggles) $(t).addEventListener("change",update);
+$("win").addEventListener("input",drawLadder);
+const SURF_Y = {
+  gamma:{label:"Risk aversion γ", vals:[0.04,0.08,0.12,0.2,0.3,0.45,0.65,1.0]},
+  fee:{label:"Fee per fill (pts)", vals:[0,0.1,0.2,0.3,0.45,0.6,0.8,1.0]},
+  noise:{label:"Uninformed flow /s", vals:[0.05,0.15,0.3,0.5,0.75,1.0,1.5,2.0]},
+};
+const SURF_X = [1,1.5,2,2.5,3,4,5,6,8,10];
+let surfData=null, surfBusy=false;
+
+function buildSurface(){
+  if(surfBusy) return; surfBusy=true;
+  const yKey=$("surfY").value, Y=SURF_Y[yKey], base=cfg(), z=Y.vals.map(()=>SURF_X.map(()=>0));
+  const total=Y.vals.length*SURF_X.length; let done=0;
+  $("surfBtn").disabled=true;
+  const cells=[]; Y.vals.forEach((yv,j)=>SURF_X.forEach((xv,i)=>cells.push([i,j,xv,yv])));
+  (function step(){
+    const t0=performance.now();
+    while(cells.length && performance.now()-t0<40){
+      const [i,j,xv,yv]=cells.shift(); let sum=0;
+      for(let s=1;s<=3;s++) sum+=run(mkt(base,s),{...base,mult:xv,[yKey]:yv},s).pnl[N-1];
+      z[j][i]=sum/3; done++;
+    }
+    $("surfStatus").textContent=`Running ${done}/${total} settings…`;
+    if(cells.length) return setTimeout(step,0);
+    surfData={z,yKey}; surfBusy=false; $("surfBtn").disabled=false;
+    let best=-Infinity,bi=0,bj=0,pos=0; z.forEach((row,j)=>row.forEach((v,i)=>{if(v>best){best=v;bi=i;bj=j} if(v>0)pos++}));
+    $("surfStatus").textContent=`Peak ${best>=0?"+":""}${best.toFixed(0)} at ${SURF_X[bi]}× width, ${Y.label} ${Y.vals[bj]}. Profitable in ${pos} of ${total} settings.`;
+    drawSurface();
+  })();
+}
+
+let rotY=-0.7, rotX=0.55;
+function hexRgb(h){h=h.replace("#","");if(h.length===3)h=h.split("").map(c=>c+c).join("");const n=parseInt(h,16);return[n>>16&255,n>>8&255,n&255]}
+function mix(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t))}
+function drawSurface(){
+  const {x,w,h}=setup($("surf"));
+  if(!surfData){x.fillStyle=css("--muted");x.textAlign="center";x.fillText("Building surface…",w/2,h/2);return}
+  const Y=SURF_Y[surfData.yKey], z=surfData.z, nx=SURF_X.length, ny=Y.vals.length;
+  const maxAbs=Math.max(1,...z.flat().map(Math.abs));
+  // Grid index space mapped to a unit cube centred on the origin; P&L zero sits at the middle height.
+  const P3=(i,j,v)=>[i/(nx-1)-0.5, j/(ny-1)-0.5, v/maxAbs*0.35];
+  const cy=Math.cos(rotY), sy=Math.sin(rotY), cx=Math.cos(rotX), sx=Math.sin(rotX);
+  const scale=Math.min(w*0.52,h*0.85), ox=w/2, oy=h*0.46;
+  const proj=([a,b,c])=>{const x1=a*cy-b*sy, y1=a*sy+b*cy; const y2=y1*cx-c*sx, z2=y1*sx+c*cx; return [ox+x1*scale, oy-z2*scale, y2]};
+  const neg=hexRgb(css("--ask")), pos=hexRgb(css("--bid")), mid=hexRgb(css("--grid")), ink=css("--ink"), muted=css("--muted"), line=css("--line");
+
+  // Floor grid and zero plane outline.
+  x.strokeStyle=line; x.lineWidth=1;
+  const floor=-0.36;
+  for(let i=0;i<nx;i++){const a=proj([i/(nx-1)-0.5,-0.5,floor]),b=proj([i/(nx-1)-0.5,0.5,floor]);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()}
+  for(let j=0;j<ny;j++){const a=proj([-0.5,j/(ny-1)-0.5,floor]),b=proj([0.5,j/(ny-1)-0.5,floor]);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()}
+  x.setLineDash([3,3]); x.strokeStyle=muted; x.beginPath();
+  [[-0.5,-0.5],[0.5,-0.5],[0.5,0.5],[-0.5,0.5],[-0.5,-0.5]].forEach(([a,b],k)=>{const p=proj([a,b,0]);k?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])});
+  x.stroke(); x.setLineDash([]);
+
+  // Painter's algorithm: draw quads back to front.
+  const quads=[];
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const pts=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]].map(([a,b])=>proj(P3(a,b,z[b][a])));
+    const avg=(z[j][i]+z[j][i+1]+z[j+1][i+1]+z[j+1][i])/4;
+    quads.push({pts,avg,depth:pts.reduce((s,p)=>s+p[2],0)/4});
+  }
+  quads.sort((a,b)=>b.depth-a.depth);
+  for(const q of quads){
+    const t=Math.min(1,Math.abs(q.avg)/maxAbs), c=mix(mid,q.avg>=0?pos:neg,0.25+0.75*t);
+    x.fillStyle=`rgb(${c})`; x.strokeStyle=`rgba(${mix(c,[0,0,0],0.25)},0.9)`; x.lineWidth=0.7;
+    x.beginPath(); q.pts.forEach((p,k)=>k?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])); x.closePath(); x.fill(); x.stroke();
+  }
+
+  // Axis tick labels along the floor edges.
+  x.fillStyle=muted; x.textAlign="center"; x.textBaseline="middle";
+  SURF_X.forEach((v,i)=>{const p=proj([i/(nx-1)-0.5,-0.58,floor]);x.fillText(v+"×",p[0],p[1])});
+  Y.vals.forEach((v,j)=>{const p=proj([0.6,j/(ny-1)-0.5,floor]);x.fillText(v,p[0],p[1])});
+  x.fillStyle=ink; x.font='600 12px "IBM Plex Sans", sans-serif';
+  let p=proj([0,-0.72,floor]); x.fillText("Quote width",p[0],p[1]);
+  p=proj([0.78,0,floor]); x.fillText(Y.label,p[0],p[1]);
+
+  // Colour key.
+  x.font='11px "IBM Plex Mono", monospace'; x.textAlign="left";
+  const kx=12, ky=14, kw=120;
+  for(let k=0;k<kw;k++){const v=(k/(kw-1))*2-1, c=mix(mid,v>=0?pos:neg,0.25+0.75*Math.abs(v));x.fillStyle=`rgb(${c})`;x.fillRect(kx+k,ky,1,8)}
+  x.fillStyle=muted; x.fillText(`−${maxAbs.toFixed(0)}`,kx,ky+18); x.textAlign="right"; x.fillText(`+${maxAbs.toFixed(0)} P&L`,kx+kw+40,ky+18);
+  x.textAlign="right"; x.fillText("Drag to rotate",w-10,ky+4);
+}
+(function(){
+  const cv=$("surf"); let drag=null;
+  cv.addEventListener("pointerdown",e=>{drag=[e.clientX,e.clientY,rotY,rotX];cv.setPointerCapture(e.pointerId);cv.style.cursor="grabbing"});
+  cv.addEventListener("pointermove",e=>{if(!drag)return;rotY=drag[2]+(e.clientX-drag[0])*0.01;rotX=Math.max(0.1,Math.min(1.4,drag[3]+(e.clientY-drag[1])*0.01));drawSurface()});
+  const end=()=>{drag=null;cv.style.cursor="grab"};
+  cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end);
+})();
+const OOS = /*OOS_DATA*/[{"scenario":"Your settings (flow 2.0, fee 0)","seed":1000,"atr":81,"flow":2.0,"fee":0.0,"pnl":493.58,"fills":250,"max_abs_inventory":2.0,"worst_drawdown":-32.31,"price_change":-95.09},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1001,"atr":81,"flow":2.0,"fee":0.0,"pnl":529.33,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-20.21,"price_change":202.71},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1002,"atr":81,"flow":2.0,"fee":0.0,"pnl":552.12,"fills":268,"max_abs_inventory":2.0,"worst_drawdown":-52.98,"price_change":-104.05},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1003,"atr":81,"flow":2.0,"fee":0.0,"pnl":560.73,"fills":242,"max_abs_inventory":2.6,"worst_drawdown":-52.09,"price_change":-251.25},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1004,"atr":81,"flow":2.0,"fee":0.0,"pnl":389.8,"fills":233,"max_abs_inventory":2.6,"worst_drawdown":-41.92,"price_change":13.25},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1005,"atr":81,"flow":2.0,"fee":0.0,"pnl":715.27,"fills":258,"max_abs_inventory":3.0,"worst_drawdown":-36.86,"price_change":141.59},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1006,"atr":81,"flow":2.0,"fee":0.0,"pnl":425.31,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-46.77,"price_change":-39.83},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1007,"atr":81,"flow":2.0,"fee":0.0,"pnl":465.5,"fills":239,"max_abs_inventory":2.4,"worst_drawdown":-45.05,"price_change":14.05},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1008,"atr":81,"flow":2.0,"fee":0.0,"pnl":535.52,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-32.69,"price_change":-33.33},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1009,"atr":81,"flow":2.0,"fee":0.0,"pnl":453.18,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-47.25,"price_change":139.58},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1010,"atr":81,"flow":2.0,"fee":0.0,"pnl":591.99,"fills":252,"max_abs_inventory":3.2,"worst_drawdown":-29.73,"price_change":-38.65},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1011,"atr":81,"flow":2.0,"fee":0.0,"pnl":526.19,"fills":253,"max_abs_inventory":2.0,"worst_drawdown":-29.58,"price_change":120.76},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1012,"atr":81,"flow":2.0,"fee":0.0,"pnl":408.59,"fills":254,"max_abs_inventory":2.6,"worst_drawdown":-41.49,"price_change":-2.95},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1013,"atr":81,"flow":2.0,"fee":0.0,"pnl":563.69,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-27.3,"price_change":24.27},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1014,"atr":81,"flow":2.0,"fee":0.0,"pnl":452.69,"fills":264,"max_abs_inventory":2.0,"worst_drawdown":-33.1,"price_change":-28.03},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1015,"atr":81,"flow":2.0,"fee":0.0,"pnl":642.37,"fills":269,"max_abs_inventory":2.0,"worst_drawdown":-30.32,"price_change":35.24},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1016,"atr":81,"flow":2.0,"fee":0.0,"pnl":592.48,"fills":276,"max_abs_inventory":2.0,"worst_drawdown":-32.06,"price_change":-180.42},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1017,"atr":81,"flow":2.0,"fee":0.0,"pnl":427.74,"fills":253,"max_abs_inventory":3.0,"worst_drawdown":-37.81,"price_change":109.01},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1018,"atr":81,"flow":2.0,"fee":0.0,"pnl":652.74,"fills":274,"max_abs_inventory":2.4,"worst_drawdown":-30.18,"price_change":-170.39},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1019,"atr":81,"flow":2.0,"fee":0.0,"pnl":572.86,"fills":255,"max_abs_inventory":2.0,"worst_drawdown":-27.98,"price_change":-13.35},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1020,"atr":81,"flow":2.0,"fee":0.0,"pnl":503.21,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-30.59,"price_change":101.64},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1021,"atr":81,"flow":2.0,"fee":0.0,"pnl":580.71,"fills":272,"max_abs_inventory":3.0,"worst_drawdown":-47.02,"price_change":-76.99},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1022,"atr":81,"flow":2.0,"fee":0.0,"pnl":427.24,"fills":244,"max_abs_inventory":2.0,"worst_drawdown":-37.73,"price_change":114.76},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1023,"atr":81,"flow":2.0,"fee":0.0,"pnl":476.54,"fills":267,"max_abs_inventory":2.0,"worst_drawdown":-35.05,"price_change":84.41},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1024,"atr":81,"flow":2.0,"fee":0.0,"pnl":529.74,"fills":259,"max_abs_inventory":2.0,"worst_drawdown":-58.82,"price_change":-240.23},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1025,"atr":81,"flow":2.0,"fee":0.0,"pnl":409.6,"fills":225,"max_abs_inventory":2.0,"worst_drawdown":-33.83,"price_change":-110.02},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1026,"atr":81,"flow":2.0,"fee":0.0,"pnl":586.05,"fills":260,"max_abs_inventory":2.0,"worst_drawdown":-30.69,"price_change":234.15},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1027,"atr":81,"flow":2.0,"fee":0.0,"pnl":503.18,"fills":247,"max_abs_inventory":2.4,"worst_drawdown":-42.94,"price_change":75.01},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1028,"atr":81,"flow":2.0,"fee":0.0,"pnl":430.28,"fills":265,"max_abs_inventory":2.6,"worst_drawdown":-46.38,"price_change":207.5},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1029,"atr":81,"flow":2.0,"fee":0.0,"pnl":589.95,"fills":273,"max_abs_inventory":3.0,"worst_drawdown":-38.47,"price_change":-46.01},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1030,"atr":81,"flow":2.0,"fee":0.0,"pnl":575.71,"fills":218,"max_abs_inventory":2.4,"worst_drawdown":-25.99,"price_change":65.83},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1031,"atr":81,"flow":2.0,"fee":0.0,"pnl":494.11,"fills":260,"max_abs_inventory":2.6,"worst_drawdown":-32.8,"price_change":-11.36},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1032,"atr":81,"flow":2.0,"fee":0.0,"pnl":237.88,"fills":224,"max_abs_inventory":2.0,"worst_drawdown":-46.19,"price_change":-22.68},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1033,"atr":81,"flow":2.0,"fee":0.0,"pnl":543.12,"fills":270,"max_abs_inventory":3.0,"worst_drawdown":-24.63,"price_change":-56.17},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1034,"atr":81,"flow":2.0,"fee":0.0,"pnl":437.0,"fills":234,"max_abs_inventory":2.0,"worst_drawdown":-31.54,"price_change":-59.9},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1035,"atr":81,"flow":2.0,"fee":0.0,"pnl":583.63,"fills":252,"max_abs_inventory":2.4,"worst_drawdown":-27.02,"price_change":-170.72},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1036,"atr":81,"flow":2.0,"fee":0.0,"pnl":619.73,"fills":265,"max_abs_inventory":3.0,"worst_drawdown":-40.96,"price_change":135.08},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1037,"atr":81,"flow":2.0,"fee":0.0,"pnl":478.51,"fills":237,"max_abs_inventory":2.0,"worst_drawdown":-40.42,"price_change":-171.23},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1038,"atr":81,"flow":2.0,"fee":0.0,"pnl":412.9,"fills":273,"max_abs_inventory":2.0,"worst_drawdown":-63.52,"price_change":82.95},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1039,"atr":81,"flow":2.0,"fee":0.0,"pnl":439.08,"fills":243,"max_abs_inventory":2.0,"worst_drawdown":-66.15,"price_change":22.94},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1040,"atr":81,"flow":2.0,"fee":0.0,"pnl":466.04,"fills":240,"max_abs_inventory":2.0,"worst_drawdown":-32.31,"price_change":-121.54},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1041,"atr":81,"flow":2.0,"fee":0.0,"pnl":428.49,"fills":221,"max_abs_inventory":2.4,"worst_drawdown":-43.55,"price_change":79.79},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1042,"atr":81,"flow":2.0,"fee":0.0,"pnl":571.86,"fills":263,"max_abs_inventory":2.0,"worst_drawdown":-35.6,"price_change":186.44},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1043,"atr":81,"flow":2.0,"fee":0.0,"pnl":503.8,"fills":241,"max_abs_inventory":2.2,"worst_drawdown":-40.03,"price_change":21.61},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1044,"atr":81,"flow":2.0,"fee":0.0,"pnl":351.51,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-43.01,"price_change":-85.0},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1045,"atr":81,"flow":2.0,"fee":0.0,"pnl":592.0,"fills":252,"max_abs_inventory":2.0,"worst_drawdown":-20.96,"price_change":184.84},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1046,"atr":81,"flow":2.0,"fee":0.0,"pnl":400.35,"fills":213,"max_abs_inventory":2.0,"worst_drawdown":-26.18,"price_change":-31.9},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1047,"atr":81,"flow":2.0,"fee":0.0,"pnl":488.38,"fills":254,"max_abs_inventory":2.4,"worst_drawdown":-71.3,"price_change":-67.91},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1048,"atr":81,"flow":2.0,"fee":0.0,"pnl":486.75,"fills":242,"max_abs_inventory":2.4,"worst_drawdown":-46.18,"price_change":-193.91},{"scenario":"Your settings (flow 2.0, fee 0)","seed":1049,"atr":81,"flow":2.0,"fee":0.0,"pnl":491.23,"fills":245,"max_abs_inventory":2.0,"worst_drawdown":-28.53,"price_change":37.08},{"scenario":"Flow 2.0, fee 0.10","seed":1000,"atr":81,"flow":2.0,"fee":0.1,"pnl":468.58,"fills":250,"max_abs_inventory":2.0,"worst_drawdown":-32.61,"price_change":-95.09},{"scenario":"Flow 2.0, fee 0.10","seed":1001,"atr":81,"flow":2.0,"fee":0.1,"pnl":504.53,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-20.31,"price_change":202.71},{"scenario":"Flow 2.0, fee 0.10","seed":1002,"atr":81,"flow":2.0,"fee":0.1,"pnl":525.32,"fills":268,"max_abs_inventory":2.0,"worst_drawdown":-53.08,"price_change":-104.05},{"scenario":"Flow 2.0, fee 0.10","seed":1003,"atr":81,"flow":2.0,"fee":0.1,"pnl":536.57,"fills":242,"max_abs_inventory":2.6,"worst_drawdown":-52.79,"price_change":-251.25},{"scenario":"Flow 2.0, fee 0.10","seed":1004,"atr":81,"flow":2.0,"fee":0.1,"pnl":366.54,"fills":233,"max_abs_inventory":2.6,"worst_drawdown":-42.72,"price_change":13.25},{"scenario":"Flow 2.0, fee 0.10","seed":1005,"atr":81,"flow":2.0,"fee":0.1,"pnl":689.47,"fills":258,"max_abs_inventory":3.0,"worst_drawdown":-37.66,"price_change":141.59},{"scenario":"Flow 2.0, fee 0.10","seed":1006,"atr":81,"flow":2.0,"fee":0.1,"pnl":400.41,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-47.37,"price_change":-39.83},{"scenario":"Flow 2.0, fee 0.10","seed":1007,"atr":81,"flow":2.0,"fee":0.1,"pnl":441.64,"fills":239,"max_abs_inventory":2.4,"worst_drawdown":-45.95,"price_change":14.05},{"scenario":"Flow 2.0, fee 0.10","seed":1008,"atr":81,"flow":2.0,"fee":0.1,"pnl":510.8,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-32.99,"price_change":-33.33},{"scenario":"Flow 2.0, fee 0.10","seed":1009,"atr":81,"flow":2.0,"fee":0.1,"pnl":427.78,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-48.65,"price_change":139.58},{"scenario":"Flow 2.0, fee 0.10","seed":1010,"atr":81,"flow":2.0,"fee":0.1,"pnl":566.87,"fills":252,"max_abs_inventory":3.2,"worst_drawdown":-29.93,"price_change":-38.65},{"scenario":"Flow 2.0, fee 0.10","seed":1011,"atr":81,"flow":2.0,"fee":0.1,"pnl":500.89,"fills":253,"max_abs_inventory":2.0,"worst_drawdown":-30.38,"price_change":120.76},{"scenario":"Flow 2.0, fee 0.10","seed":1012,"atr":81,"flow":2.0,"fee":0.1,"pnl":383.23,"fills":254,"max_abs_inventory":2.6,"worst_drawdown":-42.19,"price_change":-2.95},{"scenario":"Flow 2.0, fee 0.10","seed":1013,"atr":81,"flow":2.0,"fee":0.1,"pnl":538.29,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-27.3,"price_change":24.27},{"scenario":"Flow 2.0, fee 0.10","seed":1014,"atr":81,"flow":2.0,"fee":0.1,"pnl":426.29,"fills":264,"max_abs_inventory":2.0,"worst_drawdown":-33.7,"price_change":-28.03},{"scenario":"Flow 2.0, fee 0.10","seed":1015,"atr":81,"flow":2.0,"fee":0.1,"pnl":615.51,"fills":269,"max_abs_inventory":2.0,"worst_drawdown":-31.52,"price_change":35.24},{"scenario":"Flow 2.0, fee 0.10","seed":1016,"atr":81,"flow":2.0,"fee":0.1,"pnl":564.88,"fills":276,"max_abs_inventory":2.0,"worst_drawdown":-32.19,"price_change":-180.42},{"scenario":"Flow 2.0, fee 0.10","seed":1017,"atr":81,"flow":2.0,"fee":0.1,"pnl":402.44,"fills":253,"max_abs_inventory":3.0,"worst_drawdown":-39.19,"price_change":109.01},{"scenario":"Flow 2.0, fee 0.10","seed":1018,"atr":81,"flow":2.0,"fee":0.1,"pnl":625.38,"fills":274,"max_abs_inventory":2.4,"worst_drawdown":-30.24,"price_change":-170.39},{"scenario":"Flow 2.0, fee 0.10","seed":1019,"atr":81,"flow":2.0,"fee":0.1,"pnl":547.36,"fills":255,"max_abs_inventory":2.0,"worst_drawdown":-28.18,"price_change":-13.35},{"scenario":"Flow 2.0, fee 0.10","seed":1020,"atr":81,"flow":2.0,"fee":0.1,"pnl":478.31,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-31.15,"price_change":101.64},{"scenario":"Flow 2.0, fee 0.10","seed":1021,"atr":81,"flow":2.0,"fee":0.1,"pnl":553.59,"fills":272,"max_abs_inventory":3.0,"worst_drawdown":-47.42,"price_change":-76.99},{"scenario":"Flow 2.0, fee 0.10","seed":1022,"atr":81,"flow":2.0,"fee":0.1,"pnl":402.84,"fills":244,"max_abs_inventory":2.0,"worst_drawdown":-38.93,"price_change":114.76},{"scenario":"Flow 2.0, fee 0.10","seed":1023,"atr":81,"flow":2.0,"fee":0.1,"pnl":449.84,"fills":267,"max_abs_inventory":2.0,"worst_drawdown":-35.85,"price_change":84.41},{"scenario":"Flow 2.0, fee 0.10","seed":1024,"atr":81,"flow":2.0,"fee":0.1,"pnl":503.88,"fills":259,"max_abs_inventory":2.0,"worst_drawdown":-59.11,"price_change":-240.23},{"scenario":"Flow 2.0, fee 0.10","seed":1025,"atr":81,"flow":2.0,"fee":0.1,"pnl":387.14,"fills":225,"max_abs_inventory":2.0,"worst_drawdown":-34.23,"price_change":-110.02},{"scenario":"Flow 2.0, fee 0.10","seed":1026,"atr":81,"flow":2.0,"fee":0.1,"pnl":560.05,"fills":260,"max_abs_inventory":2.0,"worst_drawdown":-30.89,"price_change":234.15},{"scenario":"Flow 2.0, fee 0.10","seed":1027,"atr":81,"flow":2.0,"fee":0.1,"pnl":478.56,"fills":247,"max_abs_inventory":2.4,"worst_drawdown":-43.44,"price_change":75.01},{"scenario":"Flow 2.0, fee 0.10","seed":1028,"atr":81,"flow":2.0,"fee":0.1,"pnl":403.86,"fills":265,"max_abs_inventory":2.6,"worst_drawdown":-46.58,"price_change":207.5},{"scenario":"Flow 2.0, fee 0.10","seed":1029,"atr":81,"flow":2.0,"fee":0.1,"pnl":562.65,"fills":273,"max_abs_inventory":3.0,"worst_drawdown":-38.47,"price_change":-46.01},{"scenario":"Flow 2.0, fee 0.10","seed":1030,"atr":81,"flow":2.0,"fee":0.1,"pnl":553.95,"fills":218,"max_abs_inventory":2.4,"worst_drawdown":-26.99,"price_change":65.83},{"scenario":"Flow 2.0, fee 0.10","seed":1031,"atr":81,"flow":2.0,"fee":0.1,"pnl":468.15,"fills":260,"max_abs_inventory":2.6,"worst_drawdown":-33.0,"price_change":-11.36},{"scenario":"Flow 2.0, fee 0.10","seed":1032,"atr":81,"flow":2.0,"fee":0.1,"pnl":215.48,"fills":224,"max_abs_inventory":2.0,"worst_drawdown":-48.86,"price_change":-22.68},{"scenario":"Flow 2.0, fee 0.10","seed":1033,"atr":81,"flow":2.0,"fee":0.1,"pnl":516.12,"fills":270,"max_abs_inventory":3.0,"worst_drawdown":-24.83,"price_change":-56.17},{"scenario":"Flow 2.0, fee 0.10","seed":1034,"atr":81,"flow":2.0,"fee":0.1,"pnl":413.6,"fills":234,"max_abs_inventory":2.0,"worst_drawdown":-31.74,"price_change":-59.9},{"scenario":"Flow 2.0, fee 0.10","seed":1035,"atr":81,"flow":2.0,"fee":0.1,"pnl":558.47,"fills":252,"max_abs_inventory":2.4,"worst_drawdown":-27.02,"price_change":-170.72},{"scenario":"Flow 2.0, fee 0.10","seed":1036,"atr":81,"flow":2.0,"fee":0.1,"pnl":593.31,"fills":265,"max_abs_inventory":3.0,"worst_drawdown":-41.56,"price_change":135.08},{"scenario":"Flow 2.0, fee 0.10","seed":1037,"atr":81,"flow":2.0,"fee":0.1,"pnl":454.81,"fills":237,"max_abs_inventory":2.0,"worst_drawdown":-41.42,"price_change":-171.23},{"scenario":"Flow 2.0, fee 0.10","seed":1038,"atr":81,"flow":2.0,"fee":0.1,"pnl":385.6,"fills":273,"max_abs_inventory":2.0,"worst_drawdown":-64.82,"price_change":82.95},{"scenario":"Flow 2.0, fee 0.10","seed":1039,"atr":81,"flow":2.0,"fee":0.1,"pnl":414.78,"fills":243,"max_abs_inventory":2.0,"worst_drawdown":-67.45,"price_change":22.94},{"scenario":"Flow 2.0, fee 0.10","seed":1040,"atr":81,"flow":2.0,"fee":0.1,"pnl":442.04,"fills":240,"max_abs_inventory":2.0,"worst_drawdown":-32.81,"price_change":-121.54},{"scenario":"Flow 2.0, fee 0.10","seed":1041,"atr":81,"flow":2.0,"fee":0.1,"pnl":406.43,"fills":221,"max_abs_inventory":2.4,"worst_drawdown":-44.2,"price_change":79.79},{"scenario":"Flow 2.0, fee 0.10","seed":1042,"atr":81,"flow":2.0,"fee":0.1,"pnl":545.64,"fills":263,"max_abs_inventory":2.0,"worst_drawdown":-35.8,"price_change":186.44},{"scenario":"Flow 2.0, fee 0.10","seed":1043,"atr":81,"flow":2.0,"fee":0.1,"pnl":479.78,"fills":241,"max_abs_inventory":2.2,"worst_drawdown":-40.23,"price_change":21.61},{"scenario":"Flow 2.0, fee 0.10","seed":1044,"atr":81,"flow":2.0,"fee":0.1,"pnl":326.61,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-43.41,"price_change":-85.0},{"scenario":"Flow 2.0, fee 0.10","seed":1045,"atr":81,"flow":2.0,"fee":0.1,"pnl":566.88,"fills":252,"max_abs_inventory":2.0,"worst_drawdown":-21.16,"price_change":184.84},{"scenario":"Flow 2.0, fee 0.10","seed":1046,"atr":81,"flow":2.0,"fee":0.1,"pnl":379.05,"fills":213,"max_abs_inventory":2.0,"worst_drawdown":-26.73,"price_change":-31.9},{"scenario":"Flow 2.0, fee 0.10","seed":1047,"atr":81,"flow":2.0,"fee":0.1,"pnl":463.02,"fills":254,"max_abs_inventory":2.4,"worst_drawdown":-71.9,"price_change":-67.91},{"scenario":"Flow 2.0, fee 0.10","seed":1048,"atr":81,"flow":2.0,"fee":0.1,"pnl":462.63,"fills":242,"max_abs_inventory":2.4,"worst_drawdown":-46.98,"price_change":-193.91},{"scenario":"Flow 2.0, fee 0.10","seed":1049,"atr":81,"flow":2.0,"fee":0.1,"pnl":466.77,"fills":245,"max_abs_inventory":2.0,"worst_drawdown":-28.53,"price_change":37.08},{"scenario":"Flow 2.0, fee 0.25","seed":1000,"atr":81,"flow":2.0,"fee":0.25,"pnl":431.08,"fills":250,"max_abs_inventory":2.0,"worst_drawdown":-33.06,"price_change":-95.09},{"scenario":"Flow 2.0, fee 0.25","seed":1001,"atr":81,"flow":2.0,"fee":0.25,"pnl":467.33,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-20.46,"price_change":202.71},{"scenario":"Flow 2.0, fee 0.25","seed":1002,"atr":81,"flow":2.0,"fee":0.25,"pnl":485.12,"fills":268,"max_abs_inventory":2.0,"worst_drawdown":-53.23,"price_change":-104.05},{"scenario":"Flow 2.0, fee 0.25","seed":1003,"atr":81,"flow":2.0,"fee":0.25,"pnl":500.33,"fills":242,"max_abs_inventory":2.6,"worst_drawdown":-53.84,"price_change":-251.25},{"scenario":"Flow 2.0, fee 0.25","seed":1004,"atr":81,"flow":2.0,"fee":0.25,"pnl":331.65,"fills":233,"max_abs_inventory":2.6,"worst_drawdown":-43.92,"price_change":13.25},{"scenario":"Flow 2.0, fee 0.25","seed":1005,"atr":81,"flow":2.0,"fee":0.25,"pnl":650.77,"fills":258,"max_abs_inventory":3.0,"worst_drawdown":-40.06,"price_change":141.59},{"scenario":"Flow 2.0, fee 0.25","seed":1006,"atr":81,"flow":2.0,"fee":0.25,"pnl":363.06,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-48.27,"price_change":-39.83},{"scenario":"Flow 2.0, fee 0.25","seed":1007,"atr":81,"flow":2.0,"fee":0.25,"pnl":405.85,"fills":239,"max_abs_inventory":2.4,"worst_drawdown":-47.3,"price_change":14.05},{"scenario":"Flow 2.0, fee 0.25","seed":1008,"atr":81,"flow":2.0,"fee":0.25,"pnl":473.72,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-33.44,"price_change":-33.33},{"scenario":"Flow 2.0, fee 0.25","seed":1009,"atr":81,"flow":2.0,"fee":0.25,"pnl":389.68,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-50.75,"price_change":139.58},{"scenario":"Flow 2.0, fee 0.25","seed":1010,"atr":81,"flow":2.0,"fee":0.25,"pnl":529.19,"fills":252,"max_abs_inventory":3.2,"worst_drawdown":-30.23,"price_change":-38.65},{"scenario":"Flow 2.0, fee 0.25","seed":1011,"atr":81,"flow":2.0,"fee":0.25,"pnl":462.94,"fills":253,"max_abs_inventory":2.0,"worst_drawdown":-31.58,"price_change":120.76},{"scenario":"Flow 2.0, fee 0.25","seed":1012,"atr":81,"flow":2.0,"fee":0.25,"pnl":345.19,"fills":254,"max_abs_inventory":2.6,"worst_drawdown":-43.24,"price_change":-2.95},{"scenario":"Flow 2.0, fee 0.25","seed":1013,"atr":81,"flow":2.0,"fee":0.25,"pnl":500.19,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-27.3,"price_change":24.27},{"scenario":"Flow 2.0, fee 0.25","seed":1014,"atr":81,"flow":2.0,"fee":0.25,"pnl":386.69,"fills":264,"max_abs_inventory":2.0,"worst_drawdown":-34.6,"price_change":-28.03},{"scenario":"Flow 2.0, fee 0.25","seed":1015,"atr":81,"flow":2.0,"fee":0.25,"pnl":575.22,"fills":269,"max_abs_inventory":2.0,"worst_drawdown":-33.32,"price_change":35.24},{"scenario":"Flow 2.0, fee 0.25","seed":1016,"atr":81,"flow":2.0,"fee":0.25,"pnl":523.48,"fills":276,"max_abs_inventory":2.0,"worst_drawdown":-34.89,"price_change":-180.42},{"scenario":"Flow 2.0, fee 0.25","seed":1017,"atr":81,"flow":2.0,"fee":0.25,"pnl":364.49,"fills":253,"max_abs_inventory":3.0,"worst_drawdown":-41.59,"price_change":109.01},{"scenario":"Flow 2.0, fee 0.25","seed":1018,"atr":81,"flow":2.0,"fee":0.25,"pnl":584.34,"fills":274,"max_abs_inventory":2.4,"worst_drawdown":-30.69,"price_change":-170.39},{"scenario":"Flow 2.0, fee 0.25","seed":1019,"atr":81,"flow":2.0,"fee":0.25,"pnl":509.11,"fills":255,"max_abs_inventory":2.0,"worst_drawdown":-28.48,"price_change":-13.35},{"scenario":"Flow 2.0, fee 0.25","seed":1020,"atr":81,"flow":2.0,"fee":0.25,"pnl":440.96,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-32.65,"price_change":101.64},{"scenario":"Flow 2.0, fee 0.25","seed":1021,"atr":81,"flow":2.0,"fee":0.25,"pnl":512.91,"fills":272,"max_abs_inventory":3.0,"worst_drawdown":-48.02,"price_change":-76.99},{"scenario":"Flow 2.0, fee 0.25","seed":1022,"atr":81,"flow":2.0,"fee":0.25,"pnl":366.24,"fills":244,"max_abs_inventory":2.0,"worst_drawdown":-40.73,"price_change":114.76},{"scenario":"Flow 2.0, fee 0.25","seed":1023,"atr":81,"flow":2.0,"fee":0.25,"pnl":409.79,"fills":267,"max_abs_inventory":2.0,"worst_drawdown":-37.05,"price_change":84.41},{"scenario":"Flow 2.0, fee 0.25","seed":1024,"atr":81,"flow":2.0,"fee":0.25,"pnl":465.09,"fills":259,"max_abs_inventory":2.0,"worst_drawdown":-59.71,"price_change":-240.23},{"scenario":"Flow 2.0, fee 0.25","seed":1025,"atr":81,"flow":2.0,"fee":0.25,"pnl":353.45,"fills":225,"max_abs_inventory":2.0,"worst_drawdown":-34.83,"price_change":-110.02},{"scenario":"Flow 2.0, fee 0.25","seed":1026,"atr":81,"flow":2.0,"fee":0.25,"pnl":521.05,"fills":260,"max_abs_inventory":2.0,"worst_drawdown":-31.19,"price_change":234.15},{"scenario":"Flow 2.0, fee 0.25","seed":1027,"atr":81,"flow":2.0,"fee":0.25,"pnl":441.63,"fills":247,"max_abs_inventory":2.4,"worst_drawdown":-44.19,"price_change":75.01},{"scenario":"Flow 2.0, fee 0.25","seed":1028,"atr":81,"flow":2.0,"fee":0.25,"pnl":364.23,"fills":265,"max_abs_inventory":2.6,"worst_drawdown":-46.88,"price_change":207.5},{"scenario":"Flow 2.0, fee 0.25","seed":1029,"atr":81,"flow":2.0,"fee":0.25,"pnl":521.7,"fills":273,"max_abs_inventory":3.0,"worst_drawdown":-38.47,"price_change":-46.01},{"scenario":"Flow 2.0, fee 0.25","seed":1030,"atr":81,"flow":2.0,"fee":0.25,"pnl":521.31,"fills":218,"max_abs_inventory":2.4,"worst_drawdown":-28.49,"price_change":65.83},{"scenario":"Flow 2.0, fee 0.25","seed":1031,"atr":81,"flow":2.0,"fee":0.25,"pnl":429.21,"fills":260,"max_abs_inventory":2.6,"worst_drawdown":-33.3,"price_change":-11.36},{"scenario":"Flow 2.0, fee 0.25","seed":1032,"atr":81,"flow":2.0,"fee":0.25,"pnl":181.88,"fills":224,"max_abs_inventory":2.0,"worst_drawdown":-53.3,"price_change":-22.68},{"scenario":"Flow 2.0, fee 0.25","seed":1033,"atr":81,"flow":2.0,"fee":0.25,"pnl":475.62,"fills":270,"max_abs_inventory":3.0,"worst_drawdown":-25.13,"price_change":-56.17},{"scenario":"Flow 2.0, fee 0.25","seed":1034,"atr":81,"flow":2.0,"fee":0.25,"pnl":378.5,"fills":234,"max_abs_inventory":2.0,"worst_drawdown":-32.04,"price_change":-59.9},{"scenario":"Flow 2.0, fee 0.25","seed":1035,"atr":81,"flow":2.0,"fee":0.25,"pnl":520.73,"fills":252,"max_abs_inventory":2.4,"worst_drawdown":-27.26,"price_change":-170.72},{"scenario":"Flow 2.0, fee 0.25","seed":1036,"atr":81,"flow":2.0,"fee":0.25,"pnl":553.68,"fills":265,"max_abs_inventory":3.0,"worst_drawdown":-42.46,"price_change":135.08},{"scenario":"Flow 2.0, fee 0.25","seed":1037,"atr":81,"flow":2.0,"fee":0.25,"pnl":419.26,"fills":237,"max_abs_inventory":2.0,"worst_drawdown":-42.92,"price_change":-171.23},{"scenario":"Flow 2.0, fee 0.25","seed":1038,"atr":81,"flow":2.0,"fee":0.25,"pnl":344.65,"fills":273,"max_abs_inventory":2.0,"worst_drawdown":-66.77,"price_change":82.95},{"scenario":"Flow 2.0, fee 0.25","seed":1039,"atr":81,"flow":2.0,"fee":0.25,"pnl":378.33,"fills":243,"max_abs_inventory":2.0,"worst_drawdown":-69.4,"price_change":22.94},{"scenario":"Flow 2.0, fee 0.25","seed":1040,"atr":81,"flow":2.0,"fee":0.25,"pnl":406.04,"fills":240,"max_abs_inventory":2.0,"worst_drawdown":-33.56,"price_change":-121.54},{"scenario":"Flow 2.0, fee 0.25","seed":1041,"atr":81,"flow":2.0,"fee":0.25,"pnl":373.34,"fills":221,"max_abs_inventory":2.4,"worst_drawdown":-45.4,"price_change":79.79},{"scenario":"Flow 2.0, fee 0.25","seed":1042,"atr":81,"flow":2.0,"fee":0.25,"pnl":506.31,"fills":263,"max_abs_inventory":2.0,"worst_drawdown":-36.1,"price_change":186.44},{"scenario":"Flow 2.0, fee 0.25","seed":1043,"atr":81,"flow":2.0,"fee":0.25,"pnl":443.75,"fills":241,"max_abs_inventory":2.2,"worst_drawdown":-40.53,"price_change":21.61},{"scenario":"Flow 2.0, fee 0.25","seed":1044,"atr":81,"flow":2.0,"fee":0.25,"pnl":289.26,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-44.01,"price_change":-85.0},{"scenario":"Flow 2.0, fee 0.25","seed":1045,"atr":81,"flow":2.0,"fee":0.25,"pnl":529.2,"fills":252,"max_abs_inventory":2.0,"worst_drawdown":-22.04,"price_change":184.84},{"scenario":"Flow 2.0, fee 0.25","seed":1046,"atr":81,"flow":2.0,"fee":0.25,"pnl":347.1,"fills":213,"max_abs_inventory":2.0,"worst_drawdown":-28.23,"price_change":-31.9},{"scenario":"Flow 2.0, fee 0.25","seed":1047,"atr":81,"flow":2.0,"fee":0.25,"pnl":424.98,"fills":254,"max_abs_inventory":2.4,"worst_drawdown":-72.8,"price_change":-67.91},{"scenario":"Flow 2.0, fee 0.25","seed":1048,"atr":81,"flow":2.0,"fee":0.25,"pnl":426.45,"fills":242,"max_abs_inventory":2.4,"worst_drawdown":-48.18,"price_change":-193.91},{"scenario":"Flow 2.0, fee 0.25","seed":1049,"atr":81,"flow":2.0,"fee":0.25,"pnl":430.08,"fills":245,"max_abs_inventory":2.0,"worst_drawdown":-28.53,"price_change":37.08},{"scenario":"Flow 2.0, fee 0.50","seed":1000,"atr":81,"flow":2.0,"fee":0.5,"pnl":368.58,"fills":250,"max_abs_inventory":2.0,"worst_drawdown":-33.81,"price_change":-95.09},{"scenario":"Flow 2.0, fee 0.50","seed":1001,"atr":81,"flow":2.0,"fee":0.5,"pnl":405.33,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-20.71,"price_change":202.71},{"scenario":"Flow 2.0, fee 0.50","seed":1002,"atr":81,"flow":2.0,"fee":0.5,"pnl":418.12,"fills":268,"max_abs_inventory":2.0,"worst_drawdown":-53.48,"price_change":-104.05},{"scenario":"Flow 2.0, fee 0.50","seed":1003,"atr":81,"flow":2.0,"fee":0.5,"pnl":439.93,"fills":242,"max_abs_inventory":2.6,"worst_drawdown":-55.59,"price_change":-251.25},{"scenario":"Flow 2.0, fee 0.50","seed":1004,"atr":81,"flow":2.0,"fee":0.5,"pnl":273.5,"fills":233,"max_abs_inventory":2.6,"worst_drawdown":-46.92,"price_change":13.25},{"scenario":"Flow 2.0, fee 0.50","seed":1005,"atr":81,"flow":2.0,"fee":0.5,"pnl":586.27,"fills":258,"max_abs_inventory":3.0,"worst_drawdown":-44.52,"price_change":141.59},{"scenario":"Flow 2.0, fee 0.50","seed":1006,"atr":81,"flow":2.0,"fee":0.5,"pnl":300.81,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-49.77,"price_change":-39.83},{"scenario":"Flow 2.0, fee 0.50","seed":1007,"atr":81,"flow":2.0,"fee":0.5,"pnl":346.2,"fills":239,"max_abs_inventory":2.4,"worst_drawdown":-49.55,"price_change":14.05},{"scenario":"Flow 2.0, fee 0.50","seed":1008,"atr":81,"flow":2.0,"fee":0.5,"pnl":411.92,"fills":248,"max_abs_inventory":2.0,"worst_drawdown":-34.19,"price_change":-33.33},{"scenario":"Flow 2.0, fee 0.50","seed":1009,"atr":81,"flow":2.0,"fee":0.5,"pnl":326.18,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-54.25,"price_change":139.58},{"scenario":"Flow 2.0, fee 0.50","seed":1010,"atr":81,"flow":2.0,"fee":0.5,"pnl":466.39,"fills":252,"max_abs_inventory":3.2,"worst_drawdown":-31.02,"price_change":-38.65},{"scenario":"Flow 2.0, fee 0.50","seed":1011,"atr":81,"flow":2.0,"fee":0.5,"pnl":399.69,"fills":253,"max_abs_inventory":2.0,"worst_drawdown":-33.58,"price_change":120.76},{"scenario":"Flow 2.0, fee 0.50","seed":1012,"atr":81,"flow":2.0,"fee":0.5,"pnl":281.79,"fills":254,"max_abs_inventory":2.6,"worst_drawdown":-46.37,"price_change":-2.95},{"scenario":"Flow 2.0, fee 0.50","seed":1013,"atr":81,"flow":2.0,"fee":0.5,"pnl":436.69,"fills":254,"max_abs_inventory":2.0,"worst_drawdown":-27.3,"price_change":24.27},{"scenario":"Flow 2.0, fee 0.50","seed":1014,"atr":81,"flow":2.0,"fee":0.5,"pnl":320.69,"fills":264,"max_abs_inventory":2.0,"worst_drawdown":-36.1,"price_change":-28.03},{"scenario":"Flow 2.0, fee 0.50","seed":1015,"atr":81,"flow":2.0,"fee":0.5,"pnl":508.07,"fills":269,"max_abs_inventory":2.0,"worst_drawdown":-36.32,"price_change":35.24},{"scenario":"Flow 2.0, fee 0.50","seed":1016,"atr":81,"flow":2.0,"fee":0.5,"pnl":454.48,"fills":276,"max_abs_inventory":2.0,"worst_drawdown":-39.39,"price_change":-180.42},{"scenario":"Flow 2.0, fee 0.50","seed":1017,"atr":81,"flow":2.0,"fee":0.5,"pnl":301.24,"fills":253,"max_abs_inventory":3.0,"worst_drawdown":-45.59,"price_change":109.01},{"scenario":"Flow 2.0, fee 0.50","seed":1018,"atr":81,"flow":2.0,"fee":0.5,"pnl":515.94,"fills":274,"max_abs_inventory":2.4,"worst_drawdown":-31.44,"price_change":-170.39},{"scenario":"Flow 2.0, fee 0.50","seed":1019,"atr":81,"flow":2.0,"fee":0.5,"pnl":445.36,"fills":255,"max_abs_inventory":2.0,"worst_drawdown":-28.98,"price_change":-13.35},{"scenario":"Flow 2.0, fee 0.50","seed":1020,"atr":81,"flow":2.0,"fee":0.5,"pnl":378.71,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-35.15,"price_change":101.64},{"scenario":"Flow 2.0, fee 0.50","seed":1021,"atr":81,"flow":2.0,"fee":0.5,"pnl":445.11,"fills":272,"max_abs_inventory":3.0,"worst_drawdown":-51.75,"price_change":-76.99},{"scenario":"Flow 2.0, fee 0.50","seed":1022,"atr":81,"flow":2.0,"fee":0.5,"pnl":305.24,"fills":244,"max_abs_inventory":2.0,"worst_drawdown":-43.73,"price_change":114.76},{"scenario":"Flow 2.0, fee 0.50","seed":1023,"atr":81,"flow":2.0,"fee":0.5,"pnl":343.04,"fills":267,"max_abs_inventory":2.0,"worst_drawdown":-39.05,"price_change":84.41},{"scenario":"Flow 2.0, fee 0.50","seed":1024,"atr":81,"flow":2.0,"fee":0.5,"pnl":400.44,"fills":259,"max_abs_inventory":2.0,"worst_drawdown":-60.71,"price_change":-240.23},{"scenario":"Flow 2.0, fee 0.50","seed":1025,"atr":81,"flow":2.0,"fee":0.5,"pnl":297.3,"fills":225,"max_abs_inventory":2.0,"worst_drawdown":-35.83,"price_change":-110.02},{"scenario":"Flow 2.0, fee 0.50","seed":1026,"atr":81,"flow":2.0,"fee":0.5,"pnl":456.05,"fills":260,"max_abs_inventory":2.0,"worst_drawdown":-31.69,"price_change":234.15},{"scenario":"Flow 2.0, fee 0.50","seed":1027,"atr":81,"flow":2.0,"fee":0.5,"pnl":380.08,"fills":247,"max_abs_inventory":2.4,"worst_drawdown":-45.44,"price_change":75.01},{"scenario":"Flow 2.0, fee 0.50","seed":1028,"atr":81,"flow":2.0,"fee":0.5,"pnl":298.18,"fills":265,"max_abs_inventory":2.6,"worst_drawdown":-48.25,"price_change":207.5},{"scenario":"Flow 2.0, fee 0.50","seed":1029,"atr":81,"flow":2.0,"fee":0.5,"pnl":453.45,"fills":273,"max_abs_inventory":3.0,"worst_drawdown":-38.47,"price_change":-46.01},{"scenario":"Flow 2.0, fee 0.50","seed":1030,"atr":81,"flow":2.0,"fee":0.5,"pnl":466.91,"fills":218,"max_abs_inventory":2.4,"worst_drawdown":-30.99,"price_change":65.83},{"scenario":"Flow 2.0, fee 0.50","seed":1031,"atr":81,"flow":2.0,"fee":0.5,"pnl":364.31,"fills":260,"max_abs_inventory":2.6,"worst_drawdown":-33.8,"price_change":-11.36},{"scenario":"Flow 2.0, fee 0.50","seed":1032,"atr":81,"flow":2.0,"fee":0.5,"pnl":125.88,"fills":224,"max_abs_inventory":2.0,"worst_drawdown":-60.8,"price_change":-22.68},{"scenario":"Flow 2.0, fee 0.50","seed":1033,"atr":81,"flow":2.0,"fee":0.5,"pnl":408.12,"fills":270,"max_abs_inventory":3.0,"worst_drawdown":-26.67,"price_change":-56.17},{"scenario":"Flow 2.0, fee 0.50","seed":1034,"atr":81,"flow":2.0,"fee":0.5,"pnl":320.0,"fills":234,"max_abs_inventory":2.0,"worst_drawdown":-32.54,"price_change":-59.9},{"scenario":"Flow 2.0, fee 0.50","seed":1035,"atr":81,"flow":2.0,"fee":0.5,"pnl":457.83,"fills":252,"max_abs_inventory":2.4,"worst_drawdown":-29.77,"price_change":-170.72},{"scenario":"Flow 2.0, fee 0.50","seed":1036,"atr":81,"flow":2.0,"fee":0.5,"pnl":487.63,"fills":265,"max_abs_inventory":3.0,"worst_drawdown":-43.96,"price_change":135.08},{"scenario":"Flow 2.0, fee 0.50","seed":1037,"atr":81,"flow":2.0,"fee":0.5,"pnl":360.01,"fills":237,"max_abs_inventory":2.0,"worst_drawdown":-45.42,"price_change":-171.23},{"scenario":"Flow 2.0, fee 0.50","seed":1038,"atr":81,"flow":2.0,"fee":0.5,"pnl":276.4,"fills":273,"max_abs_inventory":2.0,"worst_drawdown":-70.02,"price_change":82.95},{"scenario":"Flow 2.0, fee 0.50","seed":1039,"atr":81,"flow":2.0,"fee":0.5,"pnl":317.58,"fills":243,"max_abs_inventory":2.0,"worst_drawdown":-72.65,"price_change":22.94},{"scenario":"Flow 2.0, fee 0.50","seed":1040,"atr":81,"flow":2.0,"fee":0.5,"pnl":346.04,"fills":240,"max_abs_inventory":2.0,"worst_drawdown":-35.12,"price_change":-121.54},{"scenario":"Flow 2.0, fee 0.50","seed":1041,"atr":81,"flow":2.0,"fee":0.5,"pnl":318.19,"fills":221,"max_abs_inventory":2.4,"worst_drawdown":-47.4,"price_change":79.79},{"scenario":"Flow 2.0, fee 0.50","seed":1042,"atr":81,"flow":2.0,"fee":0.5,"pnl":440.76,"fills":263,"max_abs_inventory":2.0,"worst_drawdown":-37.18,"price_change":186.44},{"scenario":"Flow 2.0, fee 0.50","seed":1043,"atr":81,"flow":2.0,"fee":0.5,"pnl":383.7,"fills":241,"max_abs_inventory":2.2,"worst_drawdown":-41.07,"price_change":21.61},{"scenario":"Flow 2.0, fee 0.50","seed":1044,"atr":81,"flow":2.0,"fee":0.5,"pnl":227.01,"fills":249,"max_abs_inventory":2.0,"worst_drawdown":-45.01,"price_change":-85.0},{"scenario":"Flow 2.0, fee 0.50","seed":1045,"atr":81,"flow":2.0,"fee":0.5,"pnl":466.4,"fills":252,"max_abs_inventory":2.0,"worst_drawdown":-24.04,"price_change":184.84},{"scenario":"Flow 2.0, fee 0.50","seed":1046,"atr":81,"flow":2.0,"fee":0.5,"pnl":293.85,"fills":213,"max_abs_inventory":2.0,"worst_drawdown":-30.98,"price_change":-31.9},{"scenario":"Flow 2.0, fee 0.50","seed":1047,"atr":81,"flow":2.0,"fee":0.5,"pnl":361.58,"fills":254,"max_abs_inventory":2.4,"worst_drawdown":-74.3,"price_change":-67.91},{"scenario":"Flow 2.0, fee 0.50","seed":1048,"atr":81,"flow":2.0,"fee":0.5,"pnl":366.15,"fills":242,"max_abs_inventory":2.4,"worst_drawdown":-50.66,"price_change":-193.91},{"scenario":"Flow 2.0, fee 0.50","seed":1049,"atr":81,"flow":2.0,"fee":0.5,"pnl":368.93,"fills":245,"max_abs_inventory":2.0,"worst_drawdown":-28.97,"price_change":37.08},{"scenario":"Default flow 0.3, fee 0","seed":1000,"atr":81,"flow":0.3,"fee":0.0,"pnl":51.17,"fills":106,"max_abs_inventory":2.0,"worst_drawdown":-67.09,"price_change":-95.09},{"scenario":"Default flow 0.3, fee 0","seed":1001,"atr":81,"flow":0.3,"fee":0.0,"pnl":218.88,"fills":122,"max_abs_inventory":2.0,"worst_drawdown":-38.56,"price_change":202.71},{"scenario":"Default flow 0.3, fee 0","seed":1002,"atr":81,"flow":0.3,"fee":0.0,"pnl":57.71,"fills":99,"max_abs_inventory":1.0,"worst_drawdown":-42.39,"price_change":-104.05},{"scenario":"Default flow 0.3, fee 0","seed":1003,"atr":81,"flow":0.3,"fee":0.0,"pnl":19.89,"fills":102,"max_abs_inventory":3.0,"worst_drawdown":-80.23,"price_change":-251.25},{"scenario":"Default flow 0.3, fee 0","seed":1004,"atr":81,"flow":0.3,"fee":0.0,"pnl":7.17,"fills":96,"max_abs_inventory":2.0,"worst_drawdown":-66.46,"price_change":13.25},{"scenario":"Default flow 0.3, fee 0","seed":1005,"atr":81,"flow":0.3,"fee":0.0,"pnl":68.14,"fills":92,"max_abs_inventory":2.0,"worst_drawdown":-67.32,"price_change":141.59},{"scenario":"Default flow 0.3, fee 0","seed":1006,"atr":81,"flow":0.3,"fee":0.0,"pnl":-90.28,"fills":81,"max_abs_inventory":2.0,"worst_drawdown":-130.9,"price_change":-39.83},{"scenario":"Default flow 0.3, fee 0","seed":1007,"atr":81,"flow":0.3,"fee":0.0,"pnl":-13.8,"fills":90,"max_abs_inventory":2.0,"worst_drawdown":-91.05,"price_change":14.05},{"scenario":"Default flow 0.3, fee 0","seed":1008,"atr":81,"flow":0.3,"fee":0.0,"pnl":61.41,"fills":88,"max_abs_inventory":2.0,"worst_drawdown":-52.68,"price_change":-33.33},{"scenario":"Default flow 0.3, fee 0","seed":1009,"atr":81,"flow":0.3,"fee":0.0,"pnl":24.52,"fills":118,"max_abs_inventory":2.0,"worst_drawdown":-92.12,"price_change":139.58},{"scenario":"Default flow 0.3, fee 0","seed":1010,"atr":81,"flow":0.3,"fee":0.0,"pnl":76.36,"fills":84,"max_abs_inventory":2.0,"worst_drawdown":-73.1,"price_change":-38.65},{"scenario":"Default flow 0.3, fee 0","seed":1011,"atr":81,"flow":0.3,"fee":0.0,"pnl":54.07,"fills":98,"max_abs_inventory":1.0,"worst_drawdown":-84.66,"price_change":120.76},{"scenario":"Default flow 0.3, fee 0","seed":1012,"atr":81,"flow":0.3,"fee":0.0,"pnl":12.2,"fills":120,"max_abs_inventory":2.0,"worst_drawdown":-107.97,"price_change":-2.95},{"scenario":"Default flow 0.3, fee 0","seed":1013,"atr":81,"flow":0.3,"fee":0.0,"pnl":99.8,"fills":111,"max_abs_inventory":2.0,"worst_drawdown":-44.87,"price_change":24.27},{"scenario":"Default flow 0.3, fee 0","seed":1014,"atr":81,"flow":0.3,"fee":0.0,"pnl":78.99,"fills":114,"max_abs_inventory":2.0,"worst_drawdown":-70.46,"price_change":-28.03},{"scenario":"Default flow 0.3, fee 0","seed":1015,"atr":81,"flow":0.3,"fee":0.0,"pnl":125.92,"fills":110,"max_abs_inventory":2.0,"worst_drawdown":-43.67,"price_change":35.24},{"scenario":"Default flow 0.3, fee 0","seed":1016,"atr":81,"flow":0.3,"fee":0.0,"pnl":109.92,"fills":109,"max_abs_inventory":2.0,"worst_drawdown":-45.46,"price_change":-180.42},{"scenario":"Default flow 0.3, fee 0","seed":1017,"atr":81,"flow":0.3,"fee":0.0,"pnl":-32.52,"fills":107,"max_abs_inventory":2.0,"worst_drawdown":-117.52,"price_change":109.01},{"scenario":"Default flow 0.3, fee 0","seed":1018,"atr":81,"flow":0.3,"fee":0.0,"pnl":141.99,"fills":124,"max_abs_inventory":2.0,"worst_drawdown":-58.1,"price_change":-170.39},{"scenario":"Default flow 0.3, fee 0","seed":1019,"atr":81,"flow":0.3,"fee":0.0,"pnl":78.15,"fills":101,"max_abs_inventory":2.0,"worst_drawdown":-48.99,"price_change":-13.35},{"scenario":"Default flow 0.3, fee 0","seed":1020,"atr":81,"flow":0.3,"fee":0.0,"pnl":58.17,"fills":101,"max_abs_inventory":2.0,"worst_drawdown":-41.03,"price_change":101.64},{"scenario":"Default flow 0.3, fee 0","seed":1021,"atr":81,"flow":0.3,"fee":0.0,"pnl":11.78,"fills":122,"max_abs_inventory":2.0,"worst_drawdown":-88.44,"price_change":-76.99},{"scenario":"Default flow 0.3, fee 0","seed":1022,"atr":81,"flow":0.3,"fee":0.0,"pnl":124.14,"fills":119,"max_abs_inventory":2.0,"worst_drawdown":-59.66,"price_change":114.76},{"scenario":"Default flow 0.3, fee 0","seed":1023,"atr":81,"flow":0.3,"fee":0.0,"pnl":42.05,"fills":109,"max_abs_inventory":2.0,"worst_drawdown":-76.9,"price_change":84.41},{"scenario":"Default flow 0.3, fee 0","seed":1024,"atr":81,"flow":0.3,"fee":0.0,"pnl":-4.85,"fills":111,"max_abs_inventory":2.0,"worst_drawdown":-92.94,"price_change":-240.23},{"scenario":"Default flow 0.3, fee 0","seed":1025,"atr":81,"flow":0.3,"fee":0.0,"pnl":-10.94,"fills":83,"max_abs_inventory":2.0,"worst_drawdown":-122.26,"price_change":-110.02},{"scenario":"Default flow 0.3, fee 0","seed":1026,"atr":81,"flow":0.3,"fee":0.0,"pnl":24.23,"fills":104,"max_abs_inventory":2.0,"worst_drawdown":-94.7,"price_change":234.15},{"scenario":"Default flow 0.3, fee 0","seed":1027,"atr":81,"flow":0.3,"fee":0.0,"pnl":-27.38,"fills":108,"max_abs_inventory":2.0,"worst_drawdown":-107.55,"price_change":75.01},{"scenario":"Default flow 0.3, fee 0","seed":1028,"atr":81,"flow":0.3,"fee":0.0,"pnl":17.41,"fills":116,"max_abs_inventory":2.0,"worst_drawdown":-102.69,"price_change":207.5},{"scenario":"Default flow 0.3, fee 0","seed":1029,"atr":81,"flow":0.3,"fee":0.0,"pnl":-18.32,"fills":99,"max_abs_inventory":2.0,"worst_drawdown":-130.86,"price_change":-46.01},{"scenario":"Default flow 0.3, fee 0","seed":1030,"atr":81,"flow":0.3,"fee":0.0,"pnl":45.34,"fills":92,"max_abs_inventory":2.0,"worst_drawdown":-73.49,"price_change":65.83},{"scenario":"Default flow 0.3, fee 0","seed":1031,"atr":81,"flow":0.3,"fee":0.0,"pnl":-28.72,"fills":120,"max_abs_inventory":2.6,"worst_drawdown":-105.3,"price_change":-11.36},{"scenario":"Default flow 0.3, fee 0","seed":1032,"atr":81,"flow":0.3,"fee":0.0,"pnl":-160.66,"fills":94,"max_abs_inventory":2.0,"worst_drawdown":-189.54,"price_change":-22.68},{"scenario":"Default flow 0.3, fee 0","seed":1033,"atr":81,"flow":0.3,"fee":0.0,"pnl":120.0,"fills":120,"max_abs_inventory":2.0,"worst_drawdown":-54.11,"price_change":-56.17},{"scenario":"Default flow 0.3, fee 0","seed":1034,"atr":81,"flow":0.3,"fee":0.0,"pnl":-3.59,"fills":118,"max_abs_inventory":2.4,"worst_drawdown":-86.99,"price_change":-59.9},{"scenario":"Default flow 0.3, fee 0","seed":1035,"atr":81,"flow":0.3,"fee":0.0,"pnl":110.51,"fills":126,"max_abs_inventory":2.0,"worst_drawdown":-79.1,"price_change":-170.72},{"scenario":"Default flow 0.3, fee 0","seed":1036,"atr":81,"flow":0.3,"fee":0.0,"pnl":30.12,"fills":98,"max_abs_inventory":2.0,"worst_drawdown":-80.1,"price_change":135.08},{"scenario":"Default flow 0.3, fee 0","seed":1037,"atr":81,"flow":0.3,"fee":0.0,"pnl":58.13,"fills":102,"max_abs_inventory":2.0,"worst_drawdown":-59.73,"price_change":-171.23},{"scenario":"Default flow 0.3, fee 0","seed":1038,"atr":81,"flow":0.3,"fee":0.0,"pnl":34.07,"fills":112,"max_abs_inventory":2.0,"worst_drawdown":-112.32,"price_change":82.95},{"scenario":"Default flow 0.3, fee 0","seed":1039,"atr":81,"flow":0.3,"fee":0.0,"pnl":-79.05,"fills":106,"max_abs_inventory":2.0,"worst_drawdown":-126.66,"price_change":22.94},{"scenario":"Default flow 0.3, fee 0","seed":1040,"atr":81,"flow":0.3,"fee":0.0,"pnl":72.35,"fills":104,"max_abs_inventory":2.0,"worst_drawdown":-64.59,"price_change":-121.54},{"scenario":"Default flow 0.3, fee 0","seed":1041,"atr":81,"flow":0.3,"fee":0.0,"pnl":38.47,"fills":110,"max_abs_inventory":2.0,"worst_drawdown":-82.87,"price_change":79.79},{"scenario":"Default flow 0.3, fee 0","seed":1042,"atr":81,"flow":0.3,"fee":0.0,"pnl":130.33,"fills":100,"max_abs_inventory":2.0,"worst_drawdown":-51.61,"price_change":186.44},{"scenario":"Default flow 0.3, fee 0","seed":1043,"atr":81,"flow":0.3,"fee":0.0,"pnl":71.74,"fills":118,"max_abs_inventory":2.0,"worst_drawdown":-40.03,"price_change":21.61},{"scenario":"Default flow 0.3, fee 0","seed":1044,"atr":81,"flow":0.3,"fee":0.0,"pnl":-66.59,"fills":106,"max_abs_inventory":2.0,"worst_drawdown":-142.41,"price_change":-85.0},{"scenario":"Default flow 0.3, fee 0","seed":1045,"atr":81,"flow":0.3,"fee":0.0,"pnl":163.67,"fills":113,"max_abs_inventory":2.0,"worst_drawdown":-52.24,"price_change":184.84},{"scenario":"Default flow 0.3, fee 0","seed":1046,"atr":81,"flow":0.3,"fee":0.0,"pnl":108.13,"fills":95,"max_abs_inventory":2.0,"worst_drawdown":-60.77,"price_change":-31.9},{"scenario":"Default flow 0.3, fee 0","seed":1047,"atr":81,"flow":0.3,"fee":0.0,"pnl":-37.27,"fills":113,"max_abs_inventory":2.0,"worst_drawdown":-86.48,"price_change":-67.91},{"scenario":"Default flow 0.3, fee 0","seed":1048,"atr":81,"flow":0.3,"fee":0.0,"pnl":36.86,"fills":90,"max_abs_inventory":2.0,"worst_drawdown":-51.33,"price_change":-193.91},{"scenario":"Default flow 0.3, fee 0","seed":1049,"atr":81,"flow":0.3,"fee":0.0,"pnl":49.37,"fills":103,"max_abs_inventory":2.0,"worst_drawdown":-68.65,"price_change":37.08},{"scenario":"Flow 0.3, fee 0.10","seed":1000,"atr":81,"flow":0.3,"fee":0.1,"pnl":40.57,"fills":106,"max_abs_inventory":2.0,"worst_drawdown":-68.09,"price_change":-95.09},{"scenario":"Flow 0.3, fee 0.10","seed":1001,"atr":81,"flow":0.3,"fee":0.1,"pnl":206.68,"fills":122,"max_abs_inventory":2.0,"worst_drawdown":-39.06,"price_change":202.71},{"scenario":"Flow 0.3, fee 0.10","seed":1002,"atr":81,"flow":0.3,"fee":0.1,"pnl":47.81,"fills":99,"max_abs_inventory":1.0,"worst_drawdown":-43.39,"price_change":-104.05},{"scenario":"Flow 0.3, fee 0.10","seed":1003,"atr":81,"flow":0.3,"fee":0.1,"pnl":9.69,"fills":102,"max_abs_inventory":3.0,"worst_drawdown":-86.15,"price_change":-251.25},{"scenario":"Flow 0.3, fee 0.10","seed":1004,"atr":81,"flow":0.3,"fee":0.1,"pnl":-2.43,"fills":96,"max_abs_inventory":2.0,"worst_drawdown":-67.86,"price_change":13.25},{"scenario":"Flow 0.3, fee 0.10","seed":1005,"atr":81,"flow":0.3,"fee":0.1,"pnl":58.94,"fills":92,"max_abs_inventory":2.0,"worst_drawdown":-70.19,"price_change":141.59},{"scenario":"Flow 0.3, fee 0.10","seed":1006,"atr":81,"flow":0.3,"fee":0.1,"pnl":-98.38,"fills":81,"max_abs_inventory":2.0,"worst_drawdown":-137.5,"price_change":-39.83},{"scenario":"Flow 0.3, fee 0.10","seed":1007,"atr":81,"flow":0.3,"fee":0.1,"pnl":-22.8,"fills":90,"max_abs_inventory":2.0,"worst_drawdown":-95.89,"price_change":14.05},{"scenario":"Flow 0.3, fee 0.10","seed":1008,"atr":81,"flow":0.3,"fee":0.1,"pnl":52.61,"fills":88,"max_abs_inventory":2.0,"worst_drawdown":-54.48,"price_change":-33.33},{"scenario":"Flow 0.3, fee 0.10","seed":1009,"atr":81,"flow":0.3,"fee":0.1,"pnl":12.72,"fills":118,"max_abs_inventory":2.0,"worst_drawdown":-98.52,"price_change":139.58},{"scenario":"Flow 0.3, fee 0.10","seed":1010,"atr":81,"flow":0.3,"fee":0.1,"pnl":67.96,"fills":84,"max_abs_inventory":2.0,"worst_drawdown":-74.9,"price_change":-38.65},{"scenario":"Flow 0.3, fee 0.10","seed":1011,"atr":81,"flow":0.3,"fee":0.1,"pnl":44.27,"fills":98,"max_abs_inventory":1.0,"worst_drawdown":-87.26,"price_change":120.76},{"scenario":"Flow 0.3, fee 0.10","seed":1012,"atr":81,"flow":0.3,"fee":0.1,"pnl":0.2,"fills":120,"max_abs_inventory":2.0,"worst_drawdown":-110.17,"price_change":-2.95},{"scenario":"Flow 0.3, fee 0.10","seed":1013,"atr":81,"flow":0.3,"fee":0.1,"pnl":88.7,"fills":111,"max_abs_inventory":2.0,"worst_drawdown":-44.87,"price_change":24.27},{"scenario":"Flow 0.3, fee 0.10","seed":1014,"atr":81,"flow":0.3,"fee":0.1,"pnl":67.59,"fills":114,"max_abs_inventory":2.0,"worst_drawdown":-72.86,"price_change":-28.03},{"scenario":"Flow 0.3, fee 0.10","seed":1015,"atr":81,"flow":0.3,"fee":0.1,"pnl":114.92,"fills":110,"max_abs_inventory":2.0,"worst_drawdown":-43.67,"price_change":35.24},{"scenario":"Flow 0.3, fee 0.10","seed":1016,"atr":81,"flow":0.3,"fee":0.1,"pnl":99.02,"fills":109,"max_abs_inventory":2.0,"worst_drawdown":-46.06,"price_change":-180.42},{"scenario":"Flow 0.3, fee 0.10","seed":1017,"atr":81,"flow":0.3,"fee":0.1,"pnl":-43.22,"fills":107,"max_abs_inventory":2.0,"worst_drawdown":-123.32,"price_change":109.01},{"scenario":"Flow 0.3, fee 0.10","seed":1018,"atr":81,"flow":0.3,"fee":0.1,"pnl":129.59,"fills":124,"max_abs_inventory":2.0,"worst_drawdown":-58.49,"price_change":-170.39},{"scenario":"Flow 0.3, fee 0.10","seed":1019,"atr":81,"flow":0.3,"fee":0.1,"pnl":68.05,"fills":101,"max_abs_inventory":2.0,"worst_drawdown":-52.99,"price_change":-13.35},{"scenario":"Flow 0.3, fee 0.10","seed":1020,"atr":81,"flow":0.3,"fee":0.1,"pnl":48.07,"fills":101,"max_abs_inventory":2.0,"worst_drawdown":-42.63,"price_change":101.64},{"scenario":"Flow 0.3, fee 0.10","seed":1021,"atr":81,"flow":0.3,"fee":0.1,"pnl":-0.42,"fills":122,"max_abs_inventory":2.0,"worst_drawdown":-92.64,"price_change":-76.99},{"scenario":"Flow 0.3, fee 0.10","seed":1022,"atr":81,"flow":0.3,"fee":0.1,"pnl":112.24,"fills":119,"max_abs_inventory":2.0,"worst_drawdown":-63.26,"price_change":114.76},{"scenario":"Flow 0.3, fee 0.10","seed":1023,"atr":81,"flow":0.3,"fee":0.1,"pnl":31.15,"fills":109,"max_abs_inventory":2.0,"worst_drawdown":-79.5,"price_change":84.41},{"scenario":"Flow 0.3, fee 0.10","seed":1024,"atr":81,"flow":0.3,"fee":0.1,"pnl":-15.95,"fills":111,"max_abs_inventory":2.0,"worst_drawdown":-96.14,"price_change":-240.23},{"scenario":"Flow 0.3, fee 0.10","seed":1025,"atr":81,"flow":0.3,"fee":0.1,"pnl":-19.2,"fills":83,"max_abs_inventory":2.0,"worst_drawdown":-124.16,"price_change":-110.02},{"scenario":"Flow 0.3, fee 0.10","seed":1026,"atr":81,"flow":0.3,"fee":0.1,"pnl":13.83,"fills":104,"max_abs_inventory":2.0,"worst_drawdown":-97.7,"price_change":234.15},{"scenario":"Flow 0.3, fee 0.10","seed":1027,"atr":81,"flow":0.3,"fee":0.1,"pnl":-38.18,"fills":108,"max_abs_inventory":2.0,"worst_drawdown":-116.25,"price_change":75.01},{"scenario":"Flow 0.3, fee 0.10","seed":1028,"atr":81,"flow":0.3,"fee":0.1,"pnl":5.81,"fills":116,"max_abs_inventory":2.0,"worst_drawdown":-102.86,"price_change":207.5},{"scenario":"Flow 0.3, fee 0.10","seed":1029,"atr":81,"flow":0.3,"fee":0.1,"pnl":-28.22,"fills":99,"max_abs_inventory":2.0,"worst_drawdown":-133.06,"price_change":-46.01},{"scenario":"Flow 0.3, fee 0.10","seed":1030,"atr":81,"flow":0.3,"fee":0.1,"pnl":36.14,"fills":92,"max_abs_inventory":2.0,"worst_drawdown":-75.49,"price_change":65.83},{"scenario":"Flow 0.3, fee 0.10","seed":1031,"atr":81,"flow":0.3,"fee":0.1,"pnl":-40.68,"fills":120,"max_abs_inventory":2.6,"worst_drawdown":-110.3,"price_change":-11.36},{"scenario":"Flow 0.3, fee 0.10","seed":1032,"atr":81,"flow":0.3,"fee":0.1,"pnl":-170.06,"fills":94,"max_abs_inventory":2.0,"worst_drawdown":-198.54,"price_change":-22.68},{"scenario":"Flow 0.3, fee 0.10","seed":1033,"atr":81,"flow":0.3,"fee":0.1,"pnl":108.0,"fills":120,"max_abs_inventory":2.0,"worst_drawdown":-56.51,"price_change":-56.17},{"scenario":"Flow 0.3, fee 0.10","seed":1034,"atr":81,"flow":0.3,"fee":0.1,"pnl":-15.35,"fills":118,"max_abs_inventory":2.4,"worst_drawdown":-95.15,"price_change":-59.9},{"scenario":"Flow 0.3, fee 0.10","seed":1035,"atr":81,"flow":0.3,"fee":0.1,"pnl":97.91,"fills":126,"max_abs_inventory":2.0,"worst_drawdown":-79.9,"price_change":-170.72},{"scenario":"Flow 0.3, fee 0.10","seed":1036,"atr":81,"flow":0.3,"fee":0.1,"pnl":20.32,"fills":98,"max_abs_inventory":2.0,"worst_drawdown":-82.8,"price_change":135.08},{"scenario":"Flow 0.3, fee 0.10","seed":1037,"atr":81,"flow":0.3,"fee":0.1,"pnl":47.93,"fills":102,"max_abs_inventory":2.0,"worst_drawdown":-61.13,"price_change":-171.23},{"scenario":"Flow 0.3, fee 0.10","seed":1038,"atr":81,"flow":0.3,"fee":0.1,"pnl":22.87,"fills":112,"max_abs_inventory":2.0,"worst_drawdown":-114.72,"price_change":82.95},{"scenario":"Flow 0.3, fee 0.10","seed":1039,"atr":81,"flow":0.3,"fee":0.1,"pnl":-89.65,"fills":106,"max_abs_inventory":2.0,"worst_drawdown":-132.86,"price_change":22.94},{"scenario":"Flow 0.3, fee 0.10","seed":1040,"atr":81,"flow":0.3,"fee":0.1,"pnl":61.95,"fills":104,"max_abs_inventory":2.0,"worst_drawdown":-70.79,"price_change":-121.54},{"scenario":"Flow 0.3, fee 0.10","seed":1041,"atr":81,"flow":0.3,"fee":0.1,"pnl":27.47,"fills":110,"max_abs_inventory":2.0,"worst_drawdown":-85.47,"price_change":79.79},{"scenario":"Flow 0.3, fee 0.10","seed":1042,"atr":81,"flow":0.3,"fee":0.1,"pnl":120.33,"fills":100,"max_abs_inventory":2.0,"worst_drawdown":-52.41,"price_change":186.44},{"scenario":"Flow 0.3, fee 0.10","seed":1043,"atr":81,"flow":0.3,"fee":0.1,"pnl":59.94,"fills":118,"max_abs_inventory":2.0,"worst_drawdown":-40.23,"price_change":21.61},{"scenario":"Flow 0.3, fee 0.10","seed":1044,"atr":81,"flow":0.3,"fee":0.1,"pnl":-77.19,"fills":106,"max_abs_inventory":2.0,"worst_drawdown":-149.01,"price_change":-85.0},{"scenario":"Flow 0.3, fee 0.10","seed":1045,"atr":81,"flow":0.3,"fee":0.1,"pnl":152.37,"fills":113,"max_abs_inventory":2.0,"worst_drawdown":-53.22,"price_change":184.84},{"scenario":"Flow 0.3, fee 0.10","seed":1046,"atr":81,"flow":0.3,"fee":0.1,"pnl":98.63,"fills":95,"max_abs_inventory":2.0,"worst_drawdown":-61.57,"price_change":-31.9},{"scenario":"Flow 0.3, fee 0.10","seed":1047,"atr":81,"flow":0.3,"fee":0.1,"pnl":-48.57,"fills":113,"max_abs_inventory":2.0,"worst_drawdown":-86.88,"price_change":-67.91},{"scenario":"Flow 0.3, fee 0.10","seed":1048,"atr":81,"flow":0.3,"fee":0.1,"pnl":27.86,"fills":90,"max_abs_inventory":2.0,"worst_drawdown":-53.33,"price_change":-193.91},{"scenario":"Flow 0.3, fee 0.10","seed":1049,"atr":81,"flow":0.3,"fee":0.1,"pnl":39.07,"fills":103,"max_abs_inventory":2.0,"worst_drawdown":-72.85,"price_change":37.08},{"scenario":"Flow 2.0, double volatility","seed":1000,"atr":162,"flow":2.0,"fee":0.0,"pnl":-130.7,"fills":102,"max_abs_inventory":2.6,"worst_drawdown":-157.26,"price_change":-190.31},{"scenario":"Flow 2.0, double volatility","seed":1001,"atr":162,"flow":2.0,"fee":0.0,"pnl":22.15,"fills":76,"max_abs_inventory":1.0,"worst_drawdown":-91.18,"price_change":406.34},{"scenario":"Flow 2.0, double volatility","seed":1002,"atr":162,"flow":2.0,"fee":0.0,"pnl":-89.64,"fills":72,"max_abs_inventory":1.0,"worst_drawdown":-162.6,"price_change":-208.16},{"scenario":"Flow 2.0, double volatility","seed":1003,"atr":162,"flow":2.0,"fee":0.0,"pnl":-11.48,"fills":72,"max_abs_inventory":2.0,"worst_drawdown":-93.94,"price_change":-500.86},{"scenario":"Flow 2.0, double volatility","seed":1004,"atr":162,"flow":2.0,"fee":0.0,"pnl":-43.01,"fills":76,"max_abs_inventory":1.0,"worst_drawdown":-95.42,"price_change":26.08},{"scenario":"Flow 2.0, double volatility","seed":1005,"atr":162,"flow":2.0,"fee":0.0,"pnl":-25.56,"fills":70,"max_abs_inventory":2.0,"worst_drawdown":-140.67,"price_change":283.39},{"scenario":"Flow 2.0, double volatility","seed":1006,"atr":162,"flow":2.0,"fee":0.0,"pnl":-30.99,"fills":58,"max_abs_inventory":1.6,"worst_drawdown":-102.51,"price_change":-80.03},{"scenario":"Flow 2.0, double volatility","seed":1007,"atr":162,"flow":2.0,"fee":0.0,"pnl":-117.26,"fills":66,"max_abs_inventory":2.0,"worst_drawdown":-137.57,"price_change":27.68},{"scenario":"Flow 2.0, double volatility","seed":1008,"atr":162,"flow":2.0,"fee":0.0,"pnl":52.91,"fills":64,"max_abs_inventory":1.6,"worst_drawdown":-56.69,"price_change":-67.05},{"scenario":"Flow 2.0, double volatility","seed":1009,"atr":162,"flow":2.0,"fee":0.0,"pnl":-64.64,"fills":80,"max_abs_inventory":2.0,"worst_drawdown":-105.11,"price_change":279.36},{"scenario":"Flow 2.0, double volatility","seed":1010,"atr":162,"flow":2.0,"fee":0.0,"pnl":-92.51,"fills":64,"max_abs_inventory":2.0,"worst_drawdown":-165.8,"price_change":-77.67},{"scenario":"Flow 2.0, double volatility","seed":1011,"atr":162,"flow":2.0,"fee":0.0,"pnl":-323.23,"fills":92,"max_abs_inventory":1.6,"worst_drawdown":-343.89,"price_change":241.55},{"scenario":"Flow 2.0, double volatility","seed":1012,"atr":162,"flow":2.0,"fee":0.0,"pnl":-59.47,"fills":87,"max_abs_inventory":2.2,"worst_drawdown":-146.4,"price_change":-6.32},{"scenario":"Flow 2.0, double volatility","seed":1013,"atr":162,"flow":2.0,"fee":0.0,"pnl":-164.57,"fills":91,"max_abs_inventory":1.0,"worst_drawdown":-193.36,"price_change":48.13},{"scenario":"Flow 2.0, double volatility","seed":1014,"atr":162,"flow":2.0,"fee":0.0,"pnl":18.67,"fills":78,"max_abs_inventory":1.0,"worst_drawdown":-110.91,"price_change":-56.46},{"scenario":"Flow 2.0, double volatility","seed":1015,"atr":162,"flow":2.0,"fee":0.0,"pnl":5.98,"fills":70,"max_abs_inventory":1.0,"worst_drawdown":-105.32,"price_change":70.09},{"scenario":"Flow 2.0, double volatility","seed":1016,"atr":162,"flow":2.0,"fee":0.0,"pnl":61.91,"fills":80,"max_abs_inventory":3.0,"worst_drawdown":-76.13,"price_change":-360.19},{"scenario":"Flow 2.0, double volatility","seed":1017,"atr":162,"flow":2.0,"fee":0.0,"pnl":-63.59,"fills":76,"max_abs_inventory":2.6,"worst_drawdown":-278.48,"price_change":217.98},{"scenario":"Flow 2.0, double volatility","seed":1018,"atr":162,"flow":2.0,"fee":0.0,"pnl":-40.65,"fills":88,"max_abs_inventory":2.0,"worst_drawdown":-102.86,"price_change":-340.27},{"scenario":"Flow 2.0, double volatility","seed":1019,"atr":162,"flow":2.0,"fee":0.0,"pnl":-70.63,"fills":74,"max_abs_inventory":1.0,"worst_drawdown":-109.42,"price_change":-27.11},{"scenario":"Flow 2.0, double volatility","seed":1020,"atr":162,"flow":2.0,"fee":0.0,"pnl":9.32,"fills":70,"max_abs_inventory":4.0,"worst_drawdown":-113.93,"price_change":203.19},{"scenario":"Flow 2.0, double volatility","seed":1021,"atr":162,"flow":2.0,"fee":0.0,"pnl":-122.32,"fills":111,"max_abs_inventory":1.6,"worst_drawdown":-169.14,"price_change":-154.21},{"scenario":"Flow 2.0, double volatility","seed":1022,"atr":162,"flow":2.0,"fee":0.0,"pnl":-89.18,"fills":88,"max_abs_inventory":1.0,"worst_drawdown":-155.38,"price_change":229.51},{"scenario":"Flow 2.0, double volatility","seed":1023,"atr":162,"flow":2.0,"fee":0.0,"pnl":-99.63,"fills":65,"max_abs_inventory":1.0,"worst_drawdown":-162.42,"price_change":168.63},{"scenario":"Flow 2.0, double volatility","seed":1024,"atr":162,"flow":2.0,"fee":0.0,"pnl":-112.48,"fills":95,"max_abs_inventory":2.6,"worst_drawdown":-174.19,"price_change":-479.01},{"scenario":"Flow 2.0, double volatility","seed":1025,"atr":162,"flow":2.0,"fee":0.0,"pnl":-38.32,"fills":66,"max_abs_inventory":1.0,"worst_drawdown":-155.8,"price_change":-220.05},{"scenario":"Flow 2.0, double volatility","seed":1026,"atr":162,"flow":2.0,"fee":0.0,"pnl":-137.52,"fills":86,"max_abs_inventory":1.0,"worst_drawdown":-200.37,"price_change":469.63},{"scenario":"Flow 2.0, double volatility","seed":1027,"atr":162,"flow":2.0,"fee":0.0,"pnl":-21.33,"fills":72,"max_abs_inventory":1.0,"worst_drawdown":-95.03,"price_change":149.77},{"scenario":"Flow 2.0, double volatility","seed":1028,"atr":162,"flow":2.0,"fee":0.0,"pnl":-68.85,"fills":90,"max_abs_inventory":1.0,"worst_drawdown":-100.43,"price_change":415.97},{"scenario":"Flow 2.0, double volatility","seed":1029,"atr":162,"flow":2.0,"fee":0.0,"pnl":-101.85,"fills":74,"max_abs_inventory":1.0,"worst_drawdown":-212.18,"price_change":-92.38},{"scenario":"Flow 2.0, double volatility","seed":1030,"atr":162,"flow":2.0,"fee":0.0,"pnl":-18.84,"fills":93,"max_abs_inventory":1.6,"worst_drawdown":-176.32,"price_change":131.36},{"scenario":"Flow 2.0, double volatility","seed":1031,"atr":162,"flow":2.0,"fee":0.0,"pnl":-109.14,"fills":82,"max_abs_inventory":1.6,"worst_drawdown":-199.43,"price_change":-23.14},{"scenario":"Flow 2.0, double volatility","seed":1032,"atr":162,"flow":2.0,"fee":0.0,"pnl":-271.19,"fills":85,"max_abs_inventory":1.4,"worst_drawdown":-314.82,"price_change":-45.76},{"scenario":"Flow 2.0, double volatility","seed":1033,"atr":162,"flow":2.0,"fee":0.0,"pnl":-163.83,"fills":107,"max_abs_inventory":1.6,"worst_drawdown":-259.89,"price_change":-112.67},{"scenario":"Flow 2.0, double volatility","seed":1034,"atr":162,"flow":2.0,"fee":0.0,"pnl":-55.67,"fills":110,"max_abs_inventory":2.6,"worst_drawdown":-126.66,"price_change":-120.09},{"scenario":"Flow 2.0, double volatility","seed":1035,"atr":162,"flow":2.0,"fee":0.0,"pnl":-75.7,"fills":80,"max_abs_inventory":1.0,"worst_drawdown":-114.72,"price_change":-340.9},{"scenario":"Flow 2.0, double volatility","seed":1036,"atr":162,"flow":2.0,"fee":0.0,"pnl":-20.28,"fills":80,"max_abs_inventory":1.0,"worst_drawdown":-126.64,"price_change":270.31},{"scenario":"Flow 2.0, double volatility","seed":1037,"atr":162,"flow":2.0,"fee":0.0,"pnl":-43.2,"fills":96,"max_abs_inventory":2.0,"worst_drawdown":-123.18,"price_change":-341.93},{"scenario":"Flow 2.0, double volatility","seed":1038,"atr":162,"flow":2.0,"fee":0.0,"pnl":-169.03,"fills":80,"max_abs_inventory":1.0,"worst_drawdown":-217.47,"price_change":165.69},{"scenario":"Flow 2.0, double volatility","seed":1039,"atr":162,"flow":2.0,"fee":0.0,"pnl":-111.36,"fills":76,"max_abs_inventory":3.0,"worst_drawdown":-149.27,"price_change":45.47},{"scenario":"Flow 2.0, double volatility","seed":1040,"atr":162,"flow":2.0,"fee":0.0,"pnl":94.41,"fills":97,"max_abs_inventory":1.6,"worst_drawdown":-90.57,"price_change":-243.04},{"scenario":"Flow 2.0, double volatility","seed":1041,"atr":162,"flow":2.0,"fee":0.0,"pnl":-60.64,"fills":76,"max_abs_inventory":2.0,"worst_drawdown":-107.26,"price_change":159.36},{"scenario":"Flow 2.0, double volatility","seed":1042,"atr":162,"flow":2.0,"fee":0.0,"pnl":51.49,"fills":97,"max_abs_inventory":2.6,"worst_drawdown":-115.64,"price_change":373.61},{"scenario":"Flow 2.0, double volatility","seed":1043,"atr":162,"flow":2.0,"fee":0.0,"pnl":-55.88,"fills":88,"max_abs_inventory":1.6,"worst_drawdown":-146.11,"price_change":42.81},{"scenario":"Flow 2.0, double volatility","seed":1044,"atr":162,"flow":2.0,"fee":0.0,"pnl":-149.78,"fills":78,"max_abs_inventory":2.0,"worst_drawdown":-215.35,"price_change":-170.18},{"scenario":"Flow 2.0, double volatility","seed":1045,"atr":162,"flow":2.0,"fee":0.0,"pnl":11.24,"fills":83,"max_abs_inventory":1.0,"worst_drawdown":-123.42,"price_change":370.33},{"scenario":"Flow 2.0, double volatility","seed":1046,"atr":162,"flow":2.0,"fee":0.0,"pnl":-25.93,"fills":80,"max_abs_inventory":2.0,"worst_drawdown":-122.46,"price_change":-64.19},{"scenario":"Flow 2.0, double volatility","seed":1047,"atr":162,"flow":2.0,"fee":0.0,"pnl":-231.19,"fills":84,"max_abs_inventory":1.0,"worst_drawdown":-282.96,"price_change":-136.08},{"scenario":"Flow 2.0, double volatility","seed":1048,"atr":162,"flow":2.0,"fee":0.0,"pnl":-77.05,"fills":66,"max_abs_inventory":1.0,"worst_drawdown":-102.08,"price_change":-387.03},{"scenario":"Flow 2.0, double volatility","seed":1049,"atr":162,"flow":2.0,"fee":0.0,"pnl":-14.99,"fills":82,"max_abs_inventory":1.0,"worst_drawdown":-119.36,"price_change":73.77}]/*END*/;
+const OOS_COLS = [["seed","Seed",0],["pnl","P&L",1],["fills","Fills",0],["max_abs_inventory","Max |inv|",1],["worst_drawdown","Worst drawdown",1],["price_change","Price move",1]];
+let oosSort=["seed",1];
+(function(){
+  const sel=$("oosScen"); [...new Set(OOS.map(r=>r.scenario))].forEach(s=>{const o=document.createElement("option");o.value=o.textContent=s;sel.appendChild(o)});
+  sel.addEventListener("change",drawOos);
+})();
+function oosRows(){return OOS.filter(r=>r.scenario===$("oosScen").value)}
+function drawOos(){
+  const rows=oosRows(); if(!rows.length) return;
+  const p=rows.map(r=>r.pnl).sort((a,b)=>a-b), mean=p.reduce((a,b)=>a+b)/p.length, win=p.filter(v=>v>0).length/p.length;
+  const tile=(k,v,c="")=>`<div class="stat"><span>${k}</span><b class="${c}">${v}</b></div>`;
+  const sg=v=>(v>=0?"+":"")+v.toFixed(0);
+  $("oosStats").innerHTML=tile("Avg P&L",sg(mean),mean>=0?"pos":"neg")+tile("Runs in profit",(win*100).toFixed(0)+"%")+tile("Worst run",sg(p[0]),p[0]>=0?"pos":"neg")+tile("Best run",sg(p[p.length-1]),p[p.length-1]>=0?"pos":"neg");
+
+  // Histogram of final P&L, zero line marked.
+  const {x,w,h}=setup($("cHist")), pad={l:40,r:10,t:8,b:22}, bins=16;
+  let lo=Math.min(0,p[0]), hi=Math.max(0,p[p.length-1]); if(hi===lo) hi=lo+1;
+  const bw=(hi-lo)/bins, counts=new Array(bins).fill(0);
+  p.forEach(v=>counts[Math.min(bins-1,Math.floor((v-lo)/bw))]++);
+  const cmax=Math.max(...counts), X=v=>pad.l+(w-pad.l-pad.r)*(v-lo)/(hi-lo), Y=c=>pad.t+(h-pad.t-pad.b)*(1-c/cmax);
+  axes(x,w,h,pad,0,cmax,Math.min(4,cmax),v=>v.toFixed(0));
+  counts.forEach((c,i)=>{const a=lo+i*bw;x.fillStyle=a+bw/2>=0?css("--bid"):css("--ask");x.fillRect(X(a)+1,Y(c),Math.max(1,X(a+bw)-X(a)-2),Y(0)-Y(c))});
+  x.strokeStyle=css("--ink");x.setLineDash([3,3]);x.beginPath();x.moveTo(X(0),pad.t);x.lineTo(X(0),h-pad.b);x.stroke();x.setLineDash([]);
+  x.fillStyle=css("--muted");x.textAlign="center";x.textBaseline="top";
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;x.fillText(v.toFixed(0),X(v),h-pad.b+5)}
+  x.textAlign="left";x.fillText("runs",4,pad.t-2);
+
+  const [key,dir]=oosSort, sorted=[...rows].sort((a,b)=>(a[key]-b[key])*dir);
+  const th=`<tr>${OOS_COLS.map(([k,l])=>`<th data-k="${k}" scope="col" style="position:sticky;top:0;background:var(--surface);text-align:right;padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;font-weight:600">${l}${k===key?(dir>0?" ▲":" ▼"):""}</th>`).join("")}</tr>`;
+  const td=sorted.map(r=>`<tr>${OOS_COLS.map(([k,,signed])=>{const v=r[k];const c=signed&&k==="pnl"?(v>=0?"pos":"neg"):"";return `<td class="${c}" style="text-align:right;padding:4px 10px;border-bottom:1px solid var(--grid)">${signed?(v>=0&&k!=="worst_drawdown"?"+":"")+v.toFixed(1):v}</td>`}).join("")}</tr>`).join("");
+  $("oosTable").innerHTML=th+td;
+  $("oosTable").querySelectorAll("th").forEach(el=>el.addEventListener("click",()=>{const k=el.dataset.k;oosSort=[k,oosSort[0]===k?-oosSort[1]:1];drawOos()}));
+}
+
+$("surfBtn").addEventListener("click",buildSurface);
+$("surfY").addEventListener("change",buildSurface);
+
+let rt; addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(render,120)});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+update();
+setTimeout(buildSurface,50);
+</script>

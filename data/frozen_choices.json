@@ -1,0 +1,182 @@
+{
+ "xyz:GOLD": {
+  "venue": {
+   "tick": 0.1,
+   "base_size": 0.07475000000000001,
+   "maker_bps": 3.0,
+   "taker_bps": 9.0
+  },
+  "tier0": {
+   "best": {
+    "offset_ticks": 3,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 1.0,
+    "max_units": 10.0,
+    "pause_ratio": 2.0,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_dev_net": -14.588565224499682,
+   "best_dev_fills": 116,
+   "best_trading": {
+    "offset_ticks": 3,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 1.0,
+    "max_units": 10.0,
+    "pause_ratio": 2.0,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_trading_dev_net": -14.588565224499682,
+   "best_mm": {
+    "offset_ticks": 3,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": 2.0,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_mm_dev_net": -18.207009030499375,
+   "best_mm_dev_mm60": -11.632697848500165,
+   "share_profitable": 0.0
+  },
+  "zero": {
+   "best": {
+    "offset_ticks": 1,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_dev_net": -2.83658499999882,
+   "best_dev_fills": 266,
+   "best_trading": {
+    "offset_ticks": 1,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_trading_dev_net": -2.83658499999882,
+   "best_mm": {
+    "offset_ticks": 3,
+    "n_levels": 4,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_mm_dev_net": -6.294802399998844,
+   "best_mm_dev_mm60": -2.368761299999941,
+   "share_profitable": 0.0
+  }
+ },
+ "xyz:XYZ100": {
+  "venue": {
+   "tick": 1.0,
+   "base_size": 0.0077,
+   "maker_bps": 0.3,
+   "taker_bps": 0.9
+  },
+  "tier0": {
+   "best": {
+    "offset_ticks": 2,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": false,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_dev_net": 1.1455726299996258,
+   "best_dev_fills": 114,
+   "best_trading": {
+    "offset_ticks": 2,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": false,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_trading_dev_net": 1.1455726299996258,
+   "best_mm": {
+    "offset_ticks": 3,
+    "n_levels": 4,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": 2.0,
+    "lean": false,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_mm_dev_net": 0.18217006128038843,
+   "best_mm_dev_mm60": -0.25210097360000006,
+   "share_profitable": 0.13541666666666666
+  },
+  "zero": {
+   "best": {
+    "offset_ticks": 2,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": false,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_dev_net": 1.9167999999996255,
+   "best_dev_fills": 114,
+   "best_trading": {
+    "offset_ticks": 2,
+    "n_levels": 1,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": false,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_trading_dev_net": 1.9167999999996255,
+   "best_mm": {
+    "offset_ticks": 2,
+    "n_levels": 4,
+    "size_taper": 0.6,
+    "skew_ticks": 0.0,
+    "max_units": 10.0,
+    "pause_ratio": null,
+    "lean": true,
+    "latency_s": 0.5,
+    "fill_mode": "queue"
+   },
+   "best_mm_dev_net": 1.1946480000010524,
+   "best_mm_dev_mm60": 0.14112999999999998,
+   "share_profitable": 0.34375
+  }
+ }
+}

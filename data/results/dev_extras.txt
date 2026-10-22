@@ -1,0 +1,31 @@
+
+=== xyz:GOLD DEV 2.94 h, mid 4196.55 -> 4186.85 (settings and order size frozen from DEV) ===
+  variant                            fills    gross$ bp/fill    fees$      net$  spread$     inv$    mm60$ maxinv paused    mk5s   mk60s
+  tier0 best: off3 lv1 skew1.0 pause lean   116     -3.72   -1.04    10.76    -14.59     0.76    -4.48   -13.82    3.0    14%   -0.63   -0.83   (dev net -14.59)
+  tier0 best_trading: off3 lv1 skew1.0 pause lean   116     -3.72   -1.04    10.76    -14.59     0.76    -4.48   -13.82    3.0    14%   -0.63   -0.83   (dev net -14.59)
+  tier0 best_mm: off3 lv1 skew0.0 pause lean    99     -6.21   -2.02     9.24    -18.21     1.01    -7.23   -11.63   10.9    14%   -0.65   -0.78   (dev net -18.21)
+  tier0 baseline: off0 lv1 skew0.5 nopause nolean   419    -10.99   -0.91    36.05    -47.22    -0.27   -10.71   -46.07    8.4     0%   -0.62   -0.73
+  zero best: off1 lv1 skew0.0 nopause lean   266     -2.83   -0.36     0.00     -2.84     0.66    -3.49    -6.31   10.9     0%   -0.64   -0.81   (dev net -2.84)
+  zero best_trading: off1 lv1 skew0.0 nopause lean   266     -2.83   -0.36     0.00     -2.84     0.66    -3.49    -6.31   10.9     0%   -0.64   -0.81   (dev net -2.84)
+  zero best_mm: off3 lv4 skew0.0 nopause lean   257     -6.26   -1.45     0.00     -6.29     1.61    -7.87    -2.37   12.1     0%   -0.70   -0.67   (dev net -6.29)
+  zero baseline: off0 lv1 skew0.5 nopause nolean   419    -10.99   -0.91     0.00    -10.99    -0.27   -10.71   -10.01    8.4     0%   -0.62   -0.73
+  Full 96-setting grid, tier-0 fees: net>0 in 0%, market-making P&L>0 in 0% (best mm60 -11.63)
+
+=== xyz:XYZ100 DEV 2.94 h, mid 30964.5 -> 30985.5 (settings and order size frozen from DEV) ===
+  variant                            fills    gross$ bp/fill    fees$      net$  spread$     inv$    mm60$ maxinv paused    mk5s   mk60s
+  tier0 best: off2 lv1 skew0.0 nopause nolean   114      1.93    0.82     0.71      1.15     0.58     1.35    -0.98   10.1     0%   -0.14   -0.10   (dev net 1.15)
+  tier0 best_trading: off2 lv1 skew0.0 nopause nolean   114      1.93    0.82     0.71      1.15     0.58     1.35    -0.98   10.1     0%   -0.14   -0.10   (dev net 1.15)
+  tier0 best_mm: off3 lv4 skew0.0 pause nolean    53      0.52    0.78     0.20      0.18     0.19     0.33    -0.25    7.5     1%   -0.44   -0.43   (dev net 0.18)
+  tier0 baseline: off0 lv1 skew0.5 nopause nolean  1543     -9.01   -0.27    10.00    -19.07     1.21   -10.21   -19.73    5.0     0%   -0.26   -0.30
+  zero best: off2 lv1 skew0.0 nopause nolean   114      1.93    0.82     0.00      1.92     0.58     1.35    -0.27   10.1     0%   -0.14   -0.10   (dev net 1.92)
+  zero best_trading: off2 lv1 skew0.0 nopause nolean   114      1.93    0.82     0.00      1.92     0.58     1.35    -0.27   10.1     0%   -0.14   -0.10   (dev net 1.92)
+  zero best_mm: off2 lv4 skew0.0 nopause lean   149      1.21    0.55     0.00      1.19     0.57     0.64     0.14   11.3     0%   -0.19   -0.03   (dev net 1.19)
+  zero baseline: off0 lv1 skew0.5 nopause nolean  1543     -9.01   -0.27     0.00     -9.02     1.21   -10.21    -9.73    5.0     0%   -0.26   -0.30
+  Full 96-setting grid, tier-0 fees: net>0 in 14%, market-making P&L>0 in 0% (best mm60 -0.25)
+  latency 0.0s (2 back, 4 levels)       39      1.24    2.20     0.17      1.04     0.49     0.75    -0.08    6.6     0%    0.57    0.24
+  latency 0.25s (2 back, 4 levels)     111      1.18    0.75     0.47      0.62     0.59     0.59    -0.77   10.1     0%   -0.09   -0.22
+  latency 0.5s (2 back, 4 levels)      171      1.68    0.74     0.68      0.87     0.67     1.01    -0.93   10.4     0%   -0.20   -0.19
+  latency 1.0s (2 back, 4 levels)      232      1.77    0.60     0.89      0.72     0.65     1.12    -1.39   11.6     0%   -0.26   -0.13
+  latency 2.0s (2 back, 4 levels)      381      0.75    0.15     1.55     -0.86     0.90    -0.15    -2.88   10.3     0%   -0.29   -0.17
+
+Wrote data\results\dev_summary.json

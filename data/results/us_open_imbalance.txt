@@ -1,0 +1,16 @@
+
+=== xyz:GOLD [us_open] 1.49 h, 15954 quote updates ===
+   horizon  samples    corr        95% interval  mid moved
+        1s     5355   0.209   [+0.166, +0.251]       13%
+        5s     1071   0.250   [+0.199, +0.294]       36%
+       30s      178   0.247   [+0.139, +0.364]       78%
+       60s       89   0.048   [-0.187, +0.323]       88%
+
+=== xyz:XYZ100 [us_open] 1.49 h, 35008 quote updates ===
+   horizon  samples    corr        95% interval  mid moved
+        1s     5356   0.377   [+0.369, +0.389]       53%
+        5s     1071   0.296   [+0.240, +0.340]       86%
+       30s      178   0.205   [+0.121, +0.332]       96%
+       60s       89   0.091   [-0.097, +0.285]       94%
+
+Wrote data\imbalance_us_open.json

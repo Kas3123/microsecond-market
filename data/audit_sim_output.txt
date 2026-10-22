@@ -1,0 +1,13 @@
+1. Expected hourly high-low range = 1.580 x hourly standard deviation (theory: sqrt(8/pi) = 1.596).
+   So ATR 83.0 implies hourly sd ~52.5 pts, not 83.0. Sim volatility was 1.58x too high.
+
+2-3. Fresh seeds 5000-5099 (100 paths). Mean +/- 1.96 standard errors.
+   Claim: user settings, flow 2.0 = +504, 100% win      +472.7 +/-   17.2   win  100%
+   Claim: user settings, flow 0.3 = +41, 74% win         +26.6 +/-   14.0   win   69%
+   Claim: stormy+rho0.2 baseline = -167, 6% win         -146.8 +/-   26.9   win   14%
+   Claim: stormy+rho0.2 both upgrades = +18, 58%          +4.7 +/-   25.8   win   50%
+   Corrected vol: user settings, flow 2.0              +1219.2 +/-   18.8   win  100%
+   Corrected vol: user settings, flow 0.3               +187.2 +/-   14.5   win  100%
+   Corrected vol: stormy+rho0.2 both upgrades           +110.4 +/-   21.3   win   87%
+
+[exited with code 0]
