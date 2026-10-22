@@ -1,5 +1,7 @@
 # Microsecond Market — does the spread pay?
 
+**Try it in your browser:** https://kas3123.github.io/microsecond-market/
+
 A student research project on **market making**: posting buy and sell orders on both sides of an order book and trying to earn the gap between them (the spread). It has two parts:
 
 1. **Research pipeline** (`src/`, `tests/`, `docs/`): a laddered ("pyramid") Avellaneda–Stoikov market maker, tested first in simulation and then on real order-book data recorded live, with a pre-registered development/holdout split.
